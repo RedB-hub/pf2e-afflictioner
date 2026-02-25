@@ -250,7 +250,9 @@
       "BLOWGUN_POISONER_APPLIED": "Blowgun Poisoner: {targetName}'s initial save against {afflictionName} was degraded one step.",
       "BLOWGUN_POISONER_DEGRADED_TOOLTIP": "Blowgun Poisoner: save result treated as {to}",
       "FAST_RECOVERY_STAGE_CHANGE": "Fast Recovery: {tokenName}'s save reduced {afflictionName} by {stages} stage(s).",
-      "FAST_RECOVERY_BUTTON_TOOLTIP": "Fast Recovery: stage will decrease by {stages} step(s)"
+      "FAST_RECOVERY_BUTTON_TOOLTIP": "Fast Recovery: stage will decrease by {stages} step(s)",
+      "PERNICIOUS_POISON_APPLIED": "Pernicious Poison: {targetName} takes {damage} poison damage from {afflictionName}",
+      "PERNICIOUS_POISON_BUTTON_TOOLTIP": "Pernicious Poison: target takes poison damage equal to poison level on success"
     },
     "DEGREES": {
       "CRITICAL_SUCCESS": "Critical Success",
@@ -494,7 +496,9 @@
       "FAILED_INITIAL_SAVE_STAGE": "Failed initial save: Stage increased by {stageIncrease} (now Stage {newStage})",
       "MAX_DURATION_UNCHANGED": "Maximum duration unchanged",
       "MULTIPLE_EXPOSURE_HEADING": "{afflictionName} - Multiple Exposure",
-      "STAGE_INCREASED_BY": "Stage increased by {stageIncrease} (now Stage {newStage})"
+      "STAGE_INCREASED_BY": "Stage increased by {stageIncrease} (now Stage {newStage})",
+      "PERNICIOUS_POISON_HEADING": "{afflictionName} - Pernicious Poison",
+      "PERNICIOUS_POISON_NOTE": "resisted the poison but takes splash poison damage (Pernicious Poison)"
     }
   }
 }

@@ -299,6 +299,18 @@ export async function injectConfirmationButton(message, root) {
     }
   }
 
+  // Pernicious Poison: show indicator on initial saves when target succeeds
+  let perniciousPoisonActive = false;
+  if (saveType === 'initial' && effectiveDegree === DEGREE_OF_SUCCESS.SUCCESS) {
+    const token = canvas?.tokens?.get(tokenId);
+    if (token) {
+      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+      if (affliction?.perniciousPoisonLevel > 0) {
+        perniciousPoisonActive = true;
+      }
+    }
+  }
+
   // Fast Recovery: show extra stage-reduction indicator on stage saves
   let fastRecoveryStages = 0;
   if (saveType === 'stage') {
@@ -359,7 +371,10 @@ export async function injectConfirmationButton(message, root) {
   const frInfoHtml = fastRecoveryStages > 0
     ? ` <i class="fas fa-bolt" style="margin-left:5px;font-size:12px;opacity:0.9;pointer-events:all;color:#90ee90;" data-tooltip="${game.i18n.format('PF2E_AFFLICTIONER.FEATS.FAST_RECOVERY_BUTTON_TOOLTIP', { stages: fastRecoveryStages })}"></i>`
     : '';
-  button.innerHTML = `<i class="fas fa-check"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLY_CONSEQUENCES')}${infoHtml}${frInfoHtml}`;
+  const ppInfoHtml = perniciousPoisonActive
+    ? ` <i class="fas fa-skull-crossbones" style="margin-left:5px;font-size:12px;opacity:0.9;pointer-events:all;color:#b19cd9;" data-tooltip="${game.i18n.localize('PF2E_AFFLICTIONER.FEATS.PERNICIOUS_POISON_BUTTON_TOOLTIP')}"></i>`
+    : '';
+  button.innerHTML = `<i class="fas fa-check"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLY_CONSEQUENCES')}${infoHtml}${frInfoHtml}${ppInfoHtml}`;
 
   button.addEventListener('mouseenter', () => {
     button.style.transform = 'translateY(-1px)';

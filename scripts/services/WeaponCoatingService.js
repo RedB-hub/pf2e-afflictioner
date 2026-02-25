@@ -103,7 +103,7 @@ export class WeaponCoatingService {
       return;
     }
 
-    // Remove existing coating (cleans up old effect) before replacing
+    // Check for existing coating before replacing
     const existing = WeaponCoatingStore.getCoating(actor, selected.weaponId);
     if (existing) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -112,7 +112,6 @@ export class WeaponCoatingService {
         defaultYes: false
       });
       if (!confirmed) return;
-      await WeaponCoatingStore.removeCoating(actor, selected.weaponId);
     }
 
     // Prompt for coating duration (always shows on GM client)
@@ -122,25 +121,15 @@ export class WeaponCoatingService {
     // Apply Toxicologist acid swap if applicable
     const finalAfflictionData = this._applyToxicologistSwap(actor, afflictionData);
 
-    const combat = game.combat;
-    const poisonImg = item.img || null;
-
-    await WeaponCoatingStore.addCoating(actor, selected.weaponId, {
+    const applied = await this._applyCoatingWithPermission(actor, selected.weaponId, {
       poisonItemUuid: itemUuid,
       poisonName: finalAfflictionData.name,
       weaponName: selected.weaponName,
       afflictionData: finalAfflictionData,
-      appliedRound: combat?.started ? combat.round : null,
-      appliedTimestamp: game.time.worldTime,
-      appliedCombatantId: this._findCombatantId(actor),
-      expirationMode
+      expirationMode,
+      poisonImg: item.img || null
     });
-
-    // Create visual coating effect on token
-    const coatingEffectUuid = await this.createCoatingEffect(actor, selected.weaponName, finalAfflictionData.name, expirationMode, poisonImg);
-    if (coatingEffectUuid) {
-      await WeaponCoatingStore.updateCoating(actor, selected.weaponId, { coatingEffectUuid });
-    }
+    if (!applied) return;
 
     // Consume one dose of the poison item
     const quantity = item.system?.quantity ?? 1;
@@ -264,7 +253,7 @@ export class WeaponCoatingService {
       return;
     }
 
-    // Remove existing coating (cleans up old effect) before replacing
+    // Check for existing coating before replacing
     const existing = WeaponCoatingStore.getCoating(actor, selected.weaponId);
     if (existing) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -273,7 +262,6 @@ export class WeaponCoatingService {
         defaultYes: false
       });
       if (!confirmed) return;
-      await WeaponCoatingStore.removeCoating(actor, selected.weaponId);
     }
 
     // Prompt for coating duration (always shows on GM client)
@@ -283,24 +271,15 @@ export class WeaponCoatingService {
     // Apply Toxicologist acid swap if applicable
     finalAfflictionData = this._applyToxicologistSwap(actor, finalAfflictionData);
 
-    const combat = game.combat;
-
-    await WeaponCoatingStore.addCoating(actor, selected.weaponId, {
+    const applied = await this._applyCoatingWithPermission(actor, selected.weaponId, {
       poisonItemUuid: null,
       poisonName: finalAfflictionData.name,
       weaponName: selected.weaponName,
       afflictionData: finalAfflictionData,
-      appliedRound: combat?.started ? combat.round : null,
-      appliedTimestamp: game.time.worldTime,
-      appliedCombatantId: this._findCombatantId(actor),
-      expirationMode
+      expirationMode,
+      poisonImg: null
     });
-
-    // Create visual coating effect on token
-    const coatingEffectUuid = await this.createCoatingEffect(actor, selected.weaponName, finalAfflictionData.name, expirationMode);
-    if (coatingEffectUuid) {
-      await WeaponCoatingStore.updateCoating(actor, selected.weaponId, { coatingEffectUuid });
-    }
+    if (!applied) return;
 
     ui.notifications.info(i.format(`${K}.COATED`, { weaponName: selected.weaponName, poisonName: finalAfflictionData.name }));
 
@@ -339,11 +318,11 @@ export class WeaponCoatingService {
 
     const options = [
       { value: 'start-next-turn', label: i.localize(`${S}.COATING_DURATION_START_NEXT_TURN`), icon: 'fas fa-hourglass-start', hint: i.localize(`${K}.DURATION_HINT_STRICT`) },
-      { value: 'end-next-turn',   label: i.localize(`${S}.COATING_DURATION_END_NEXT_TURN`),   icon: 'fas fa-hourglass-end',   hint: i.localize(`${K}.DURATION_HINT_MODERATE`) },
-      { value: '1-minute',        label: i.localize(`${S}.COATING_DURATION_1_MIN`),            icon: 'fas fa-stopwatch',       hint: '10 rounds' },
-      { value: '10-minutes',      label: i.localize(`${S}.COATING_DURATION_10_MIN`),           icon: 'fas fa-clock',           hint: '100 rounds' },
-      { value: '1-hour',          label: i.localize(`${S}.COATING_DURATION_1_HOUR`),           icon: 'fas fa-history',         hint: '600 rounds' },
-      { value: 'unlimited',       label: i.localize(`${S}.COATING_DURATION_UNLIMITED`),        icon: 'fas fa-infinity',        hint: i.localize(`${K}.DURATION_HINT_UNLIMITED`) },
+      { value: 'end-next-turn', label: i.localize(`${S}.COATING_DURATION_END_NEXT_TURN`), icon: 'fas fa-hourglass-end', hint: i.localize(`${K}.DURATION_HINT_MODERATE`) },
+      { value: '1-minute', label: i.localize(`${S}.COATING_DURATION_1_MIN`), icon: 'fas fa-stopwatch', hint: '10 rounds' },
+      { value: '10-minutes', label: i.localize(`${S}.COATING_DURATION_10_MIN`), icon: 'fas fa-clock', hint: '100 rounds' },
+      { value: '1-hour', label: i.localize(`${S}.COATING_DURATION_1_HOUR`), icon: 'fas fa-history', hint: '600 rounds' },
+      { value: 'unlimited', label: i.localize(`${S}.COATING_DURATION_UNLIMITED`), icon: 'fas fa-infinity', hint: i.localize(`${K}.DURATION_HINT_UNLIMITED`) },
     ];
 
     const cards = options.map(o => `
@@ -535,7 +514,7 @@ export class WeaponCoatingService {
       window: { title: i.localize(`${V}.DEBILITATION_TITLE`) },
       content: `<p style="margin-bottom: 0.5em;">${i.localize(`${V}.DEBILITATION_PROMPT`)}</p>`,
       buttons: [
-        { action: 'none',      label: i.localize(`${V}.DEBILITATION_NONE`),      icon: 'fas fa-times-circle' },
+        { action: 'none', label: i.localize(`${V}.DEBILITATION_NONE`), icon: 'fas fa-times-circle' },
         { action: 'hampering', label: i.localize(`${V}.DEBILITATION_HAMPERING`), icon: 'fas fa-tachometer-alt' },
         { action: 'stumbling', label: i.localize(`${V}.DEBILITATION_STUMBLING`), icon: 'fas fa-dizzy' },
       ],
@@ -543,6 +522,52 @@ export class WeaponCoatingService {
     });
 
     return result ?? null;
+  }
+
+  static async _applyCoatingToActor(actorId, weaponId, coatingParams) {
+    const actor = game.actors.get(actorId);
+    if (!actor) return false;
+
+    const existing = WeaponCoatingStore.getCoating(actor, weaponId);
+    if (existing) {
+      await WeaponCoatingStore.removeCoating(actor, weaponId);
+    }
+
+    const { poisonItemUuid, poisonName, weaponName, afflictionData, expirationMode, poisonImg } = coatingParams;
+    const combat = game.combat;
+
+    await WeaponCoatingStore.addCoating(actor, weaponId, {
+      poisonItemUuid,
+      poisonName,
+      weaponName,
+      afflictionData,
+      appliedRound: combat?.started ? combat.round : null,
+      appliedTimestamp: game.time.worldTime,
+      appliedCombatantId: this._findCombatantId(actor),
+      expirationMode
+    });
+
+    const coatingEffectUuid = await this.createCoatingEffect(actor, weaponName, poisonName, expirationMode, poisonImg);
+    if (coatingEffectUuid) {
+      await WeaponCoatingStore.updateCoating(actor, weaponId, { coatingEffectUuid });
+    }
+
+    return true;
+  }
+
+  /**
+   * Routes coating application through GM socket if the current user doesn't own the actor.
+   */
+  static async _applyCoatingWithPermission(actor, weaponId, coatingParams) {
+    if (actor.isOwner) {
+      return this._applyCoatingToActor(actor.id, weaponId, coatingParams);
+    }
+    const { SocketService } = await import('./SocketService.js');
+    if (SocketService.socket) {
+      return SocketService.requestApplyWeaponCoating(actor.id, weaponId, coatingParams);
+    }
+    console.error('PF2e Afflictioner | socketlib is required for coating weapons on unowned actors');
+    return false;
   }
 
   static _collectWeapons(speakerActorId, speakerTokenId, targetTokenIds = []) {
@@ -553,7 +578,7 @@ export class WeaponCoatingService {
       if (!token || seen.has(token.id)) return;
       seen.add(token.id);
       const actor = token.actor;
-      if (!actor || !actor.isOwner) return;
+      if (!actor) return;
       for (const weapon of (actor.itemTypes?.weapon || [])) {
         weapons.push({
           actorId: actor.id,

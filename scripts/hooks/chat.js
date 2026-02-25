@@ -160,13 +160,18 @@ async function handleAttackRoll(_message, flags) {
       // Blowgun Poisoner: if the attacker critted with a blowgun and has the feat, degrade target's initial save
       const weaponTraits = weapon.system?.traits?.value ?? [];
       const isBlowgunStrike = weaponTraits.includes('blowgun') || weapon.system?.slug === 'blowgun';
-      const buttonAfflictionData = (
+      let buttonAfflictionData = (
         outcome === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS &&
         isBlowgunStrike &&
         FeatsService.hasBlowgunPoisoner(actor)
       )
         ? { ...coating.afflictionData, blowgunPoisonerCrit: true }
         : coating.afflictionData;
+
+      // Pernicious Poison: mark affliction so success still deals flat poison damage
+      if (FeatsService.hasPerniciousPoison(actor) && coating.afflictionData.level > 0) {
+        buttonAfflictionData = { ...buttonAfflictionData, perniciousPoisonLevel: coating.afflictionData.level };
+      }
 
       const i = game.i18n;
       const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';

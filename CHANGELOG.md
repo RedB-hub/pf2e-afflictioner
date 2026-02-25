@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-25
+
+### Added
+
+- **Pernicious Poison feat automation**: When an attacker with the Pernicious Poison feat coats a weapon with a leveled poison and the target succeeds (not critically succeeds) on their initial saving throw, flat poison damage equal to the poison's level is automatically prompted. A skull-crossbones indicator appears on the save confirmation button when this feat will trigger. Auto-detected from actor feats, consistent with Blowgun Poisoner behavior.
+
+### Fixed
+
+- **Weapon coating on targeted tokens**: Players can now coat weapons on tokens they don't own by targeting them. The actor update is routed to the GM via socketlib, fixing the "lacks permission to update Actor" error.
+
 ## [1.3.0] - 2026-02-24
 
 ### Added

@@ -37,7 +37,8 @@ export class AfflictionParser {
       maxDuration,
       isVirulent: isVirulent,
       multipleExposure: this.extractMultipleExposure(description),
-      sourceItemUuid: item.uuid
+      sourceItemUuid: item.uuid,
+      level: item.system?.level?.value || 0
     };
   }
 
@@ -96,7 +97,8 @@ export class AfflictionParser {
       maxDuration: item.system?.maxDuration ? this.parseDuration(item.system.maxDuration) : this.extractMaxDuration(description),
       isVirulent: isVirulent,
       multipleExposure: this.extractMultipleExposure(description),
-      sourceItemUuid: item.uuid
+      sourceItemUuid: item.uuid,
+      level: item.system?.level?.value || 0
     };
   }
 

@@ -294,6 +294,33 @@ export class AfflictionChatService {
     });
   }
 
+  static async promptPerniciousPoisonDamage(token, affliction) {
+    const actor = token.actor;
+    const level = affliction.perniciousPoisonLevel || 0;
+    if (!level) return;
+
+    const damageLink = `@Damage[${level}[poison]]`;
+
+    const content = `
+      <div class="pf2e-afflictioner-save-request">
+        <h3><i class="fas fa-skull-crossbones"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.PERNICIOUS_POISON_HEADING', { afflictionName: affliction.name })}</h3>
+        <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.PERNICIOUS_POISON_NOTE')}</p>
+        <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLink}</p>
+        <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
+        <hr>
+        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
+        </button>
+      </div>
+    `;
+
+    await ChatMessage.create({
+      content,
+      speaker: ChatMessage.getSpeaker({ token: token }),
+      whisper: game.users.filter(u => u.isGM).map(u => u.id)
+    });
+  }
+
   static async postStageChange(token, affliction, oldStage, newStage, options = {}) {
     const oldStageText = oldStage === 0 ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.INITIAL_EXPOSURE') : `${game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.STAGE')} ${oldStage}`;
     const stageDirection = newStage > oldStage ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_INCREASED') : game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_DECREASED');

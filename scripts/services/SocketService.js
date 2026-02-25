@@ -34,9 +34,26 @@ export class SocketService {
     this.socket.register('unlockSaveButton', this.handleUnlockSaveButton.bind(this));
     this.socket.register('syncButtonState', this.handleSyncButtonState.bind(this));
     this.socket.register('gmPromptCoatingDuration', this.gmPromptCoatingDuration.bind(this));
+    this.socket.register('gmApplyWeaponCoating', this.gmApplyWeaponCoating.bind(this));
 
-    const preRerollHookId = Hooks.on('pf2e.preReroll', this.onPf2ePreReroll.bind(this));
-    const rerollHookId = Hooks.on('pf2e.reroll', this.onPf2eReroll.bind(this));
+    Hooks.on('pf2e.preReroll', this.onPf2ePreReroll.bind(this));
+    Hooks.on('pf2e.reroll', this.onPf2eReroll.bind(this));
+  }
+
+  static async gmApplyWeaponCoating(actorId, weaponId, coatingParams) {
+    if (!game.user.isGM) return false;
+    const { WeaponCoatingService } = await import('./WeaponCoatingService.js');
+    return WeaponCoatingService._applyCoatingToActor(actorId, weaponId, coatingParams);
+  }
+
+  static async requestApplyWeaponCoating(actorId, weaponId, coatingParams) {
+    if (!this.socket) return false;
+    try {
+      return await this.socket.executeAsGM('gmApplyWeaponCoating', actorId, weaponId, coatingParams);
+    } catch (error) {
+      console.error('PF2e Afflictioner | Error requesting weapon coating application:', error);
+      return false;
+    }
   }
 
   static async gmPromptCoatingDuration() {
@@ -473,7 +490,7 @@ export class SocketService {
     }
   }
 
-  static async onPf2ePreReroll(oldRoll, ...args) {
+  static async onPf2ePreReroll(oldRoll, ..._args) {
     if (!game.user.isGM) return;
 
     const messageId = oldRoll?.options?.messageId || oldRoll?.messageId;
@@ -512,7 +529,7 @@ export class SocketService {
     }
   }
 
-  static async onPf2eReroll(oldRoll, newRoll, arg2, rerollMode) {
+  static async onPf2eReroll(_oldRoll, newRoll, _arg2, _rerollMode) {
     if (!game.user.isGM) return;
 
     const oldMessageId = this._lastRerollOldMessageId;
