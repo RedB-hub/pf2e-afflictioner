@@ -374,14 +374,20 @@
       "EXPIRED": "{poisonName} coating on {weaponName} has expired",
       "EFFECT_NAME": "{poisonName} ({weaponName})",
       "EFFECT_DESCRIPTION": "{weaponName} is coated with {poisonName}",
-      "TOXICOLOGIST_APPLIED": "Toxicologist: Poison damage can be dealt as acid damage"
+      "TOXICOLOGIST_APPLIED": "Toxicologist: Poison damage can be dealt as acid damage",
+      "FIELD_VIAL_HINT": "Field Vials: adds damage to first hit, inert at end of turn.",
+      "FIELD_VIAL_HIT_TITLE": "Field Vial: {poisonName}",
+      "FIELD_VIAL_HIT_DESC": "{actorName} strikes with {weaponName} — bonus {damageType} damage from field vial."
     },
     "VISHKANYA": {
       "DEBILITATION_TITLE": "Choose Debilitation",
       "DEBILITATION_PROMPT": "Apply a debilitation with Debilitating Venom?",
       "DEBILITATION_NONE": "None",
-      "DEBILITATION_HAMPERING": "Hampering (–5/–10ft Speed)",
-      "DEBILITATION_STUMBLING": "Stumbling (Off-Guard stage 2+)"
+      "DEBILITATION_NONE_HINT": "No additional effects",
+      "DEBILITATION_HAMPERING": "Hampering",
+      "DEBILITATION_HAMPERING_HINT": "–5ft Speed (stages 1–2), –10ft Speed (stage 3)",
+      "DEBILITATION_STUMBLING": "Stumbling",
+      "DEBILITATION_STUMBLING_HINT": "Off-Guard (stage 2+), –5ft Speed (stage 3)"
     },
     "CONFLICT": {
       "TITLE": "Import Conflicts",

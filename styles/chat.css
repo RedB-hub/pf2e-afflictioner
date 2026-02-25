@@ -392,6 +392,90 @@
   display: none !important;
 }
 
+/* Debilitating Venom choice dialog */
+.dv-prompt {
+  font-size: 0.9em;
+  color: #ccc;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.dv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dv-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  user-select: none;
+  text-align: center;
+}
+
+.dv-card:hover {
+  transform: translateY(-2px);
+}
+
+.dv-card:active {
+  transform: translateY(0);
+}
+
+.dv-card:first-child:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dv-card--hampering:hover {
+  background: rgba(200, 140, 40, 0.15);
+  border-color: rgba(200, 140, 40, 0.5);
+}
+
+.dv-card--stumbling:hover {
+  background: rgba(160, 60, 160, 0.15);
+  border-color: rgba(160, 60, 160, 0.5);
+}
+
+.dv-card-icon {
+  font-size: 1.6em;
+  color: #888;
+  transition: color 0.15s;
+}
+
+.dv-card:first-child:hover .dv-card-icon { color: #bbb; }
+.dv-card--hampering .dv-card-icon { color: #c8963a; }
+.dv-card--hampering:hover .dv-card-icon { color: #e0b050; }
+.dv-card--stumbling .dv-card-icon { color: #b060b0; }
+.dv-card--stumbling:hover .dv-card-icon { color: #d080d0; }
+
+.dv-card-label {
+  font-weight: 600;
+  font-size: 0.88em;
+  color: #e0e0e0;
+  line-height: 1.2;
+}
+
+.dv-card-hint {
+  font-size: 0.72em;
+  color: #888;
+  line-height: 1.3;
+}
+
+/* Hide default buttons in debilitation dialog — cards handle selection */
+.application:has(.dv-grid) .form-footer,
+.application:has(.dv-grid) .dialog-buttons {
+  display: none !important;
+}
+
 /* Coat Weapon button on injury item chat cards */
 .pf2e-afflictioner-coat-weapon-btn {
   display: flex;

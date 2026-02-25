@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-02-25
+
+### Added
+
+- **Versatile Vial weapon coating (Field Vials)**: Versatile Vials now show a "Coat Weapon" button in chat. Applies the vial's damage as bonus damage on next hit, auto-expires at end of current turn per Field Vials rules. Consumes one vial dose on coating.
+
+- **Debilitating Venom dialog restyle**: Replaced plain dialog buttons with styled card-based UI matching the coating duration picker — each option shows an icon, label, and description with distinct hover colors.
+
+### Fixed
+
+- **Debilitating Venom dialog not rendering**: Fixed dialog failing to render when `buttons: []` was passed to `DialogV2.wait`. Now passes a hidden cancel button (same pattern as coating duration picker).
+
 ## [1.4.0] - 2026-02-25
 
 ### Added

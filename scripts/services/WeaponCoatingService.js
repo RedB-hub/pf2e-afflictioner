@@ -150,6 +150,170 @@ export class WeaponCoatingService {
   }
 
   /**
+   * Opens the coat-weapon dialog for a Versatile Vial (Field Vials feature).
+   * Instead of an affliction, stores direct damage data on the coating.
+   * Auto-expires at end of current turn per Field Vials rules.
+   *
+   * @param {Item} item - The Versatile Vial item
+   * @param {string} speakerActorId
+   * @param {string} speakerTokenId
+   * @param {string[]} targetTokenIds
+   * @returns {Promise<boolean|undefined>}
+   */
+  static async openCoatDialogForFieldVial(item, speakerActorId, speakerTokenId, targetTokenIds = []) {
+    const i = game.i18n;
+
+    const dmg = this._extractItemDamageFormula(item);
+    if (!dmg) {
+      ui.notifications.error(i.localize(`${K}.PARSE_ERROR`));
+      return;
+    }
+
+    const coatingData = {
+      isDirectDamage: true,
+      name: item.name,
+      damageFormula: dmg.formula,
+      damageType: dmg.type,
+    };
+
+    const allWeapons = this._collectWeapons(speakerActorId, speakerTokenId, targetTokenIds);
+    const weapons = allWeapons.filter(w => w.damageType === 'piercing' || w.damageType === 'slashing');
+
+    if (!weapons.length) {
+      ui.notifications.warn(i.localize(`${K}.NO_APPLICABLE_WEAPONS`));
+      return;
+    }
+
+    const groups = [];
+    const groupIndex = new Map();
+    weapons.forEach((w, idx) => {
+      if (!groupIndex.has(w.actorId)) {
+        groupIndex.set(w.actorId, groups.length);
+        groups.push({ actorName: w.actorName, weapons: [] });
+      }
+      groups[groupIndex.get(w.actorId)].weapons.push({ ...w, idx });
+    });
+
+    const sections = groups.map(g => `
+      <div class="wcs-section">
+        <h3 class="wcs-section-title">${g.actorName}</h3>
+        <div class="wcs-grid">
+          ${g.weapons.map(w => `
+            <div class="wcs-card" data-index="${w.idx}">
+              <img src="${w.img}" alt="${w.weaponName}" />
+              <div class="wcs-card-info">
+                <span class="wcs-card-name">${w.weaponName}</span>
+                <span class="wcs-card-damage">${w.damageType}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    const content = `
+      <p class="wcs-label">${i.format(`${K}.DIALOG_SELECT_LABEL`, { poisonName: `<strong>${item.name}</strong>` })}</p>
+      ${sections}
+      <p class="wcs-hint">${i.localize(`${K}.FIELD_VIAL_HINT`)}</p>
+    `;
+
+    const selected = await new Promise((resolve) => {
+      let hookId;
+
+      hookId = Hooks.on('renderDialogV2', (_app, element) => {
+        if (!element.querySelector('.wcs-grid')) return;
+        Hooks.off('renderDialogV2', hookId);
+
+        element.querySelectorAll('.wcs-card').forEach((card) => {
+          card.addEventListener('click', async () => {
+            const index = parseInt(card.dataset.index);
+            element.querySelectorAll('.wcs-card').forEach(c => c.classList.remove('wcs-selected'));
+            card.classList.add('wcs-selected');
+            resolve(weapons[index]);
+            await _app.close();
+          });
+        });
+      });
+
+      foundry.applications.api.DialogV2.wait({
+        window: { title: i.localize(`${K}.DIALOG_TITLE`) },
+        content,
+        buttons: [{ action: 'cancel', label: i.localize('PF2E_AFFLICTIONER.DIALOG.CANCEL'), icon: 'fas fa-times' }],
+        rejectClose: false
+      }).then(() => {
+        Hooks.off('renderDialogV2', hookId);
+        resolve(null);
+      }).catch(() => {
+        Hooks.off('renderDialogV2', hookId);
+        resolve(null);
+      });
+    });
+
+    if (!selected) return;
+
+    const actor = game.actors.get(selected.actorId);
+    if (!actor) {
+      ui.notifications.error(i.localize(`${K}.ACTOR_NOT_FOUND`));
+      return;
+    }
+
+    const existing = WeaponCoatingStore.getCoating(actor, selected.weaponId);
+    if (existing) {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        title: i.localize(`${K}.REPLACE_TITLE`),
+        content: `<p>${i.format(`${K}.REPLACE_CONTENT`, { weaponName: selected.weaponName, existingPoison: existing.poisonName })}</p>`,
+        defaultYes: false
+      });
+      if (!confirmed) return;
+    }
+
+    // Field Vials: "The substance becomes inert at the end of your current turn."
+    const expirationMode = 'end-next-turn';
+
+    const applied = await this._applyCoatingWithPermission(actor, selected.weaponId, {
+      poisonItemUuid: item.uuid,
+      poisonName: item.name,
+      weaponName: selected.weaponName,
+      afflictionData: coatingData,
+      expirationMode,
+      poisonImg: item.img || null
+    });
+    if (!applied) return;
+
+    // Consume one dose
+    const quantity = item.system?.quantity ?? 1;
+    if (quantity <= 1) {
+      await item.delete();
+    } else {
+      await item.update({ 'system.quantity': quantity - 1 });
+    }
+
+    ui.notifications.info(i.format(`${K}.COATED`, { weaponName: selected.weaponName, poisonName: item.name }));
+
+    const { AfflictionManager } = await import('../managers/AfflictionManager.js');
+    if (AfflictionManager.currentInstance) {
+      AfflictionManager.currentInstance.render({ force: true });
+    }
+
+    return true;
+  }
+
+  /**
+   * Extracts the damage formula and type from a PF2e item's system data.
+   * @param {Item} item
+   * @returns {{ formula: string, type: string } | null}
+   */
+  static _extractItemDamageFormula(item) {
+    const dmg = item.system?.damage;
+    if (!dmg) return null;
+    const type = dmg.damageType || 'untyped';
+    if (dmg.formula) return { formula: dmg.formula, type };
+    if (dmg.die && dmg.dice) return { formula: `${dmg.dice}${dmg.die}`, type };
+    if (dmg.die) return { formula: `1${dmg.die}`, type };
+    return null;
+  }
+
+  /**
    * Opens the coat-weapon dialog using pre-built affliction data (no item to load or consume).
    * Used by the Envenom flow where venom is produced by an ability, not a consumable item.
    *
@@ -510,15 +674,54 @@ export class WeaponCoatingService {
     const i = game.i18n;
     const V = 'PF2E_AFFLICTIONER.VISHKANYA';
 
-    const result = await foundry.applications.api.DialogV2.wait({
-      window: { title: i.localize(`${V}.DEBILITATION_TITLE`) },
-      content: `<p style="margin-bottom: 0.5em;">${i.localize(`${V}.DEBILITATION_PROMPT`)}</p>`,
-      buttons: [
-        { action: 'none', label: i.localize(`${V}.DEBILITATION_NONE`), icon: 'fas fa-times-circle' },
-        { action: 'hampering', label: i.localize(`${V}.DEBILITATION_HAMPERING`), icon: 'fas fa-tachometer-alt' },
-        { action: 'stumbling', label: i.localize(`${V}.DEBILITATION_STUMBLING`), icon: 'fas fa-dizzy' },
-      ],
-      rejectClose: false
+    const content = `
+      <p class="dv-prompt">${i.localize(`${V}.DEBILITATION_PROMPT`)}</p>
+      <div class="dv-grid">
+        <div class="dv-card" data-value="none">
+          <div class="dv-card-icon"><i class="fas fa-times-circle"></i></div>
+          <div class="dv-card-label">${i.localize(`${V}.DEBILITATION_NONE`)}</div>
+          <div class="dv-card-hint">${i.localize(`${V}.DEBILITATION_NONE_HINT`)}</div>
+        </div>
+        <div class="dv-card dv-card--hampering" data-value="hampering">
+          <div class="dv-card-icon"><i class="fas fa-shoe-prints"></i></div>
+          <div class="dv-card-label">${i.localize(`${V}.DEBILITATION_HAMPERING`)}</div>
+          <div class="dv-card-hint">${i.localize(`${V}.DEBILITATION_HAMPERING_HINT`)}</div>
+        </div>
+        <div class="dv-card dv-card--stumbling" data-value="stumbling">
+          <div class="dv-card-icon"><i class="fas fa-person-falling"></i></div>
+          <div class="dv-card-label">${i.localize(`${V}.DEBILITATION_STUMBLING`)}</div>
+          <div class="dv-card-hint">${i.localize(`${V}.DEBILITATION_STUMBLING_HINT`)}</div>
+        </div>
+      </div>
+    `;
+
+    const result = await new Promise((resolve) => {
+      let hookId;
+
+      hookId = Hooks.on('renderDialogV2', (_app, element) => {
+        if (!element.querySelector('.dv-grid')) return;
+        Hooks.off('renderDialogV2', hookId);
+
+        element.querySelectorAll('.dv-card').forEach((card) => {
+          card.addEventListener('click', async () => {
+            resolve(card.dataset.value);
+            await _app.close();
+          });
+        });
+      });
+
+      foundry.applications.api.DialogV2.wait({
+        window: { title: i.localize(`${V}.DEBILITATION_TITLE`) },
+        content,
+        buttons: [{ action: 'cancel', label: i.localize('PF2E_AFFLICTIONER.DIALOG.CANCEL'), icon: 'fas fa-times' }],
+        rejectClose: false
+      }).then(() => {
+        Hooks.off('renderDialogV2', hookId);
+        resolve(null);
+      }).catch(() => {
+        Hooks.off('renderDialogV2', hookId);
+        resolve(null);
+      });
     });
 
     return result ?? null;
