@@ -313,6 +313,10 @@ export class AfflictionService {
       virulentConsecutiveSuccesses: newVirulentConsecutiveSuccesses
     };
 
+    if (affliction.needsInitialSave) {
+      updates.needsInitialSave = false;
+    }
+
     if (affliction.inOnset && finalStage > 0) {
       updates.inOnset = false;
       updates.onsetRemaining = 0;

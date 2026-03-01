@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-03-01
+
+### Fixed
+
+- **Manual stage progression while awaiting initial save**: Manually increasing the stage of an affliction before the initial save was rolled left the affliction stuck in "awaiting initial roll" state, preventing timers from working and breaking subsequent rolls. The `needsInitialSave` flag is now properly cleared when a stage change occurs.
+
 ## [1.3.0] - 2026-02-24
 
 ### Added
