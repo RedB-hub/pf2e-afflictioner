@@ -5,11 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1] - 2026-03-01
+## [1.4.2] - 2026-03-01
 
 ### Fixed
 
 - **Manual stage progression while awaiting initial save**: Manually increasing the stage of an affliction before the initial save was rolled left the affliction stuck in "awaiting initial roll" state, preventing timers from working and breaking subsequent rolls. The `needsInitialSave` flag is now properly cleared when a stage change occurs.
+
+## [1.4.1] - 2026-02-25
+
+### Added
+
+- **Versatile Vial weapon coating (Field Vials)**: Versatile Vials now show a "Coat Weapon" button in chat. Applies the vial's damage as bonus damage on next hit, auto-expires at end of current turn per Field Vials rules. Consumes one vial dose on coating.
+
+- **Debilitating Venom dialog restyle**: Replaced plain dialog buttons with styled card-based UI matching the coating duration picker — each option shows an icon, label, and description with distinct hover colors.
+
+### Fixed
+
+- **Debilitating Venom dialog not rendering**: Fixed dialog failing to render when `buttons: []` was passed to `DialogV2.wait`. Now passes a hidden cancel button (same pattern as coating duration picker).
+
+## [1.4.0] - 2026-02-25
+
+### Added
+
+- **Pernicious Poison feat automation**: When an attacker with the Pernicious Poison feat coats a weapon with a leveled poison and the target succeeds (not critically succeeds) on their initial saving throw, flat poison damage equal to the poison's level is automatically prompted. A skull-crossbones indicator appears on the save confirmation button when this feat will trigger. Auto-detected from actor feats, consistent with Blowgun Poisoner behavior.
+
+### Fixed
+
+- **Weapon coating on targeted tokens**: Players can now coat weapons on tokens they don't own by targeting them. The actor update is routed to the GM via socketlib, fixing the "lacks permission to update Actor" error.
 
 ## [1.3.0] - 2026-02-24
 

@@ -90,6 +90,11 @@ export class AfflictionService {
     const existingAfflictionId = affliction._existingAfflictionId;
 
     if (degree === DEGREE_OF_SUCCESS.SUCCESS || degree === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS) {
+      // Pernicious Poison: on success (not crit success), deal flat poison damage = poison level
+      if (degree === DEGREE_OF_SUCCESS.SUCCESS && affliction.perniciousPoisonLevel > 0) {
+        await AfflictionChatService.promptPerniciousPoisonDamage(token, affliction);
+      }
+
       const oldStageData = null;
       await AfflictionStore.removeAffliction(token, affliction.id);
       await this.removeStageEffects(token, affliction, oldStageData, null);

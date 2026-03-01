@@ -153,6 +153,26 @@ async function handleAttackRoll(_message, flags) {
   const gmWhisper = game.users.filter(u => u.isGM).map(u => u.id);
 
   if (outcome === DEGREE_OF_SUCCESS.SUCCESS || outcome === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS) {
+    // Direct damage coatings (Field Vials) — roll bonus damage, no save
+    if (coating.afflictionData?.isDirectDamage) {
+      await WeaponCoatingStore.removeCoating(actor, weapon.id);
+      const i = game.i18n;
+      const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
+      const { damageFormula, damageType: dmgType } = coating.afflictionData;
+
+      const roll = new Roll(damageFormula);
+      await roll.evaluate();
+      await roll.toMessage({
+        flavor: `<div class="pf2e-afflictioner-save-request"><h3><i class="fas fa-flask"></i> ${i.format(`${K}.FIELD_VIAL_HIT_TITLE`, { poisonName })}</h3><p>${i.format(`${K}.FIELD_VIAL_HIT_DESC`, { actorName, weaponName, damageType: dmgType })}</p></div>`,
+        speaker: ChatMessage.getSpeaker({ actor }),
+        whisper: gmWhisper
+      });
+
+      const { AfflictionManager } = await import('../managers/AfflictionManager.js');
+      if (AfflictionManager.currentInstance) AfflictionManager.currentInstance.render({ force: true });
+      return;
+    }
+
     const damageType = weapon.system?.damage?.damageType;
     const hasPiercingOrSlashing = damageType === 'piercing' || damageType === 'slashing';
 
@@ -160,13 +180,18 @@ async function handleAttackRoll(_message, flags) {
       // Blowgun Poisoner: if the attacker critted with a blowgun and has the feat, degrade target's initial save
       const weaponTraits = weapon.system?.traits?.value ?? [];
       const isBlowgunStrike = weaponTraits.includes('blowgun') || weapon.system?.slug === 'blowgun';
-      const buttonAfflictionData = (
+      let buttonAfflictionData = (
         outcome === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS &&
         isBlowgunStrike &&
         FeatsService.hasBlowgunPoisoner(actor)
       )
         ? { ...coating.afflictionData, blowgunPoisonerCrit: true }
         : coating.afflictionData;
+
+      // Pernicious Poison: mark affliction so success still deals flat poison damage
+      if (FeatsService.hasPerniciousPoison(actor) && coating.afflictionData.level > 0) {
+        buttonAfflictionData = { ...buttonAfflictionData, perniciousPoisonLevel: coating.afflictionData.level };
+      }
 
       const i = game.i18n;
       const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';

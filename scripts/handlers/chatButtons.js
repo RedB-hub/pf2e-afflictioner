@@ -81,8 +81,9 @@ async function injectCoatWeaponButton(message, root) {
   const traits = item.system?.traits?.value || [];
   const isInjuryPoison = traits.includes('injury');
   const isEnvenom = VishkanyaService.isEnvenomItem(item);
+  const isFieldVial = item.system?.slug === 'versatile-vial' && traits.includes('poison');
 
-  if (!isInjuryPoison && !isEnvenom) return;
+  if (!isInjuryPoison && !isEnvenom && !isFieldVial) return;
 
   const speakerActorId = message.speaker?.actor;
   const speakerTokenId = message.speaker?.token;
@@ -108,6 +109,16 @@ async function injectCoatWeaponButton(message, root) {
       const data = JSON.parse(decodeURIComponent(btn.dataset.envenomData));
       const { WeaponCoatingService } = await import('../services/WeaponCoatingService.js');
       const coated = await WeaponCoatingService.openCoatDialogWithData(data, speakerActorId, speakerTokenId, targetTokenIds, { hasDebilitatingVenom });
+      if (coated) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-check"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.WEAPON_COATING.COAT_WEAPON_DONE')}`;
+      }
+    });
+  } else if (isFieldVial) {
+    btn.addEventListener('click', async () => {
+      const targetTokenIds = [...game.user.targets].map(t => t.id);
+      const { WeaponCoatingService } = await import('../services/WeaponCoatingService.js');
+      const coated = await WeaponCoatingService.openCoatDialogForFieldVial(item, speakerActorId, speakerTokenId, targetTokenIds);
       if (coated) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fas fa-check"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.WEAPON_COATING.COAT_WEAPON_DONE')}`;

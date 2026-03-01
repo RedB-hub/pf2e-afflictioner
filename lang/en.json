@@ -250,7 +250,9 @@
       "BLOWGUN_POISONER_APPLIED": "Blowgun Poisoner: {targetName}'s initial save against {afflictionName} was degraded one step.",
       "BLOWGUN_POISONER_DEGRADED_TOOLTIP": "Blowgun Poisoner: save result treated as {to}",
       "FAST_RECOVERY_STAGE_CHANGE": "Fast Recovery: {tokenName}'s save reduced {afflictionName} by {stages} stage(s).",
-      "FAST_RECOVERY_BUTTON_TOOLTIP": "Fast Recovery: stage will decrease by {stages} step(s)"
+      "FAST_RECOVERY_BUTTON_TOOLTIP": "Fast Recovery: stage will decrease by {stages} step(s)",
+      "PERNICIOUS_POISON_APPLIED": "Pernicious Poison: {targetName} takes {damage} poison damage from {afflictionName}",
+      "PERNICIOUS_POISON_BUTTON_TOOLTIP": "Pernicious Poison: target takes poison damage equal to poison level on success"
     },
     "DEGREES": {
       "CRITICAL_SUCCESS": "Critical Success",
@@ -372,14 +374,20 @@
       "EXPIRED": "{poisonName} coating on {weaponName} has expired",
       "EFFECT_NAME": "{poisonName} ({weaponName})",
       "EFFECT_DESCRIPTION": "{weaponName} is coated with {poisonName}",
-      "TOXICOLOGIST_APPLIED": "Toxicologist: Poison damage can be dealt as acid damage"
+      "TOXICOLOGIST_APPLIED": "Toxicologist: Poison damage can be dealt as acid damage",
+      "FIELD_VIAL_HINT": "Field Vials: adds damage to first hit, inert at end of turn.",
+      "FIELD_VIAL_HIT_TITLE": "Field Vial: {poisonName}",
+      "FIELD_VIAL_HIT_DESC": "{actorName} strikes with {weaponName} — bonus {damageType} damage from field vial."
     },
     "VISHKANYA": {
       "DEBILITATION_TITLE": "Choose Debilitation",
       "DEBILITATION_PROMPT": "Apply a debilitation with Debilitating Venom?",
       "DEBILITATION_NONE": "None",
-      "DEBILITATION_HAMPERING": "Hampering (–5/–10ft Speed)",
-      "DEBILITATION_STUMBLING": "Stumbling (Off-Guard stage 2+)"
+      "DEBILITATION_NONE_HINT": "No additional effects",
+      "DEBILITATION_HAMPERING": "Hampering",
+      "DEBILITATION_HAMPERING_HINT": "–5ft Speed (stages 1–2), –10ft Speed (stage 3)",
+      "DEBILITATION_STUMBLING": "Stumbling",
+      "DEBILITATION_STUMBLING_HINT": "Off-Guard (stage 2+), –5ft Speed (stage 3)"
     },
     "CONFLICT": {
       "TITLE": "Import Conflicts",
@@ -494,7 +502,9 @@
       "FAILED_INITIAL_SAVE_STAGE": "Failed initial save: Stage increased by {stageIncrease} (now Stage {newStage})",
       "MAX_DURATION_UNCHANGED": "Maximum duration unchanged",
       "MULTIPLE_EXPOSURE_HEADING": "{afflictionName} - Multiple Exposure",
-      "STAGE_INCREASED_BY": "Stage increased by {stageIncrease} (now Stage {newStage})"
+      "STAGE_INCREASED_BY": "Stage increased by {stageIncrease} (now Stage {newStage})",
+      "PERNICIOUS_POISON_HEADING": "{afflictionName} - Pernicious Poison",
+      "PERNICIOUS_POISON_NOTE": "resisted the poison but takes splash poison damage (Pernicious Poison)"
     }
   }
 }
