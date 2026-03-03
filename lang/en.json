@@ -161,8 +161,23 @@
       "CANNOT_REMOVE_LAST_STAGE": "Cannot remove the last stage. Afflictions must have at least one stage.",
       "ONSET_REMOVED": "Onset removed",
       "ONSET_ADDED": "Onset added",
+      "ONSET_EFFECT_INTERVAL": "Onset Effect Interval",
+      "ONSET_EFFECT_INTERVAL_TOOLTIP": "Applies onset effects (damage, conditions, weakness) on a recurring timer during the onset period, without triggering a saving throw.",
+      "NO_ONSET_EFFECT_INTERVAL": "No onset effect interval",
+      "ADD_ONSET_EFFECT_INTERVAL": "Add Onset Effect Interval",
+      "REMOVE_ONSET_EFFECT_INTERVAL": "Remove Onset Effect Interval",
+      "ONSET_EFFECT_INTERVAL_REMOVED": "Onset effect interval removed",
+      "ONSET_EFFECT_INTERVAL_ADDED": "Onset effect interval added",
+      "ONSET_EFFECTS": "Onset Effects",
       "MAX_DURATION_REMOVED": "Maximum duration removed (affliction is now indefinite)",
       "MAX_DURATION_ADDED": "Maximum duration added",
+      "EFFECT_INTERVAL": "Effect Interval",
+      "EFFECT_INTERVAL_TOOLTIP": "Re-applies full stage effects (conditions, damage, auto-effects) on a recurring timer, without triggering a saving throw. Independent of Save Duration.",
+      "NO_EFFECT_INTERVAL": "No effect interval (effects apply only on stage change)",
+      "ADD_EFFECT_INTERVAL": "Add Effect Interval",
+      "REMOVE_EFFECT_INTERVAL": "Remove Effect Interval",
+      "EFFECT_INTERVAL_REMOVED": "Effect interval removed",
+      "EFFECT_INTERVAL_ADDED": "Effect interval added",
       "VALIDATION_FAILED": "Validation failed: {errors}",
       "KEY_FAILED": "Could not generate definition key",
       "SAVE_FAILED": "Failed to save changes",
@@ -504,7 +519,13 @@
       "MULTIPLE_EXPOSURE_HEADING": "{afflictionName} - Multiple Exposure",
       "STAGE_INCREASED_BY": "Stage increased by {stageIncrease} (now Stage {newStage})",
       "PERNICIOUS_POISON_HEADING": "{afflictionName} - Pernicious Poison",
-      "PERNICIOUS_POISON_NOTE": "resisted the poison but takes splash poison damage (Pernicious Poison)"
+      "PERNICIOUS_POISON_NOTE": "resisted the poison but takes splash poison damage (Pernicious Poison)",
+      "EFFECT_INTERVAL_HEADING": "{afflictionName} - Recurring Effects",
+      "EFFECT_INTERVAL_NOTE": "suffers recurring effects (every {duration})",
+      "EFFECT_INTERVAL_NO_SAVE": "No save is triggered — effects reoccur automatically.",
+      "ONSET_EFFECT_INTERVAL_HEADING": "{afflictionName} - Onset Effects",
+      "ONSET_EFFECT_INTERVAL_NOTE": "suffers onset effects (every {duration})",
+      "ONSET_EFFECT_INTERVAL_NO_SAVE": "No save is triggered — onset effects fire during the onset period."
     }
   }
 }

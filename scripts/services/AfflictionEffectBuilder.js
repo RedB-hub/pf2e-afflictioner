@@ -229,6 +229,7 @@ export class AfflictionEffectBuilder {
   }
 
   static extractBonuses(effectText) {
+    if (!effectText) return [];
     const bonuses = [];
 
     const bonusMatch = effectText.match(/([+-]\d+)\s+(item|circumstance|status)\s+bonus\s+to\s+([^(]+)/gi);

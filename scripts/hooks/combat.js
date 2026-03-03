@@ -12,6 +12,7 @@ export async function onCombatUpdate(combat, changed, options, userId) {
 
       await AfflictionService.updateOnsetTimers(token, combat);
       await AfflictionService.checkDurations(token, combat);
+      await AfflictionService.checkEffectIntervals(token, combat);
     }
   }
 }

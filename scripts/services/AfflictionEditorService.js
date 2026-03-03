@@ -19,6 +19,10 @@ export class AfflictionEditorService {
     if (editedDef.dc !== undefined) merged.dc = editedDef.dc;
     if (editedDef.saveType !== undefined) merged.saveType = editedDef.saveType;
     if (editedDef.onset !== undefined) merged.onset = editedDef.onset;
+    if (editedDef.onsetEffectInterval !== undefined) merged.onsetEffectInterval = editedDef.onsetEffectInterval;
+    if (editedDef.onsetDamage !== undefined) merged.onsetDamage = editedDef.onsetDamage;
+    if (editedDef.onsetConditions !== undefined) merged.onsetConditions = editedDef.onsetConditions;
+    if (editedDef.onsetWeakness !== undefined) merged.onsetWeakness = editedDef.onsetWeakness;
     if (editedDef.stages !== undefined) merged.stages = editedDef.stages;
     if (editedDef.isVirulent !== undefined) merged.isVirulent = editedDef.isVirulent;
 
@@ -52,8 +56,29 @@ export class AfflictionEditorService {
       }
     }
 
+    if (editedData.onsetEffectInterval) {
+      if (!Number.isInteger(editedData.onsetEffectInterval.value) || editedData.onsetEffectInterval.value <= 0) {
+        errors.push('Onset effect interval value must be a positive integer');
+      }
+      const validUnits = ['round', 'minute', 'hour', 'day', 'week'];
+      if (!validUnits.includes(editedData.onsetEffectInterval.unit)) {
+        errors.push('Onset effect interval unit must be round, minute, hour, day, or week');
+      }
+    }
+
     if (editedData.stages && Array.isArray(editedData.stages)) {
       for (const stage of editedData.stages) {
+        if (stage.effectInterval) {
+          if (!Number.isInteger(stage.effectInterval.value) || stage.effectInterval.value <= 0) {
+            errors.push(`Stage ${stage.number}: Effect interval value must be a positive integer`);
+          }
+
+          const validEffectUnits = ['round', 'minute', 'hour', 'day', 'week'];
+          if (!validEffectUnits.includes(stage.effectInterval.unit)) {
+            errors.push(`Stage ${stage.number}: Effect interval unit must be round, minute, hour, day, or week`);
+          }
+        }
+
         if (stage.duration) {
           if (!Number.isInteger(stage.duration.value) || stage.duration.value <= 0) {
             errors.push(`Stage ${stage.number}: Duration value must be a positive integer`);
@@ -144,6 +169,10 @@ export class AfflictionEditorService {
       saveType: afflictionData.saveType || 'fortitude',
       isVirulent: afflictionData.isVirulent || false,
       onset: afflictionData.onset || null,
+      onsetEffectInterval: afflictionData.onsetEffectInterval || null,
+      onsetDamage: afflictionData.onsetDamage || [],
+      onsetConditions: afflictionData.onsetConditions || [],
+      onsetWeakness: afflictionData.onsetWeakness || [],
       maxDuration: afflictionData.maxDuration || null,
       stages: afflictionData.stages || [],
       sourceItemUuid: afflictionData.sourceItemUuid || null

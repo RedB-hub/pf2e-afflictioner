@@ -436,4 +436,135 @@ export class AfflictionChatService {
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
+
+  static async postOnsetEffectIntervalTrigger(token, affliction) {
+    const actor = token.actor;
+    const interval = affliction.onsetEffectInterval;
+    const intervalText = interval ? `${interval.value} ${interval.unit}(s)` : '';
+
+    // Effects summary
+    const effectParts = [];
+    if (affliction.onsetConditions?.length) {
+      effectParts.push(`${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CONDITIONS_PREFIX')} ${affliction.onsetConditions.map(c => {
+        if (c.name === 'persistent damage' || c.name === 'persistent-damage') {
+          return game.i18n.format('PF2E_AFFLICTIONER.CHAT.PERSISTENT_DAMAGE_LABEL', { formula: c.persistentFormula || '1d6', type: c.persistentType || 'untyped' });
+        }
+        return c.value ? `${c.name} ${c.value}` : c.name;
+      }).join(', ')}`);
+    }
+    if (affliction.onsetWeakness?.length) {
+      effectParts.push(`${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.WEAKNESS_PREFIX')} ${affliction.onsetWeakness.map(w => `${w.type} ${w.value}`).join(', ')}`);
+    }
+    const effectsSummary = effectParts.length
+      ? `<div style="margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.9em;">${effectParts.join(' • ')}</div>`
+      : '';
+
+    const hasDamage = affliction.onsetDamage && affliction.onsetDamage.length > 0;
+    let damageSection = '';
+    if (hasDamage) {
+      const damageLinks = affliction.onsetDamage.map(d => {
+        const formula = (typeof d === 'string' ? d : d.formula || '').trim().replace(/\[.*$/, '');
+        const type = typeof d === 'object' ? d.type : 'untyped';
+        return type && type !== 'untyped'
+          ? `@Damage[${formula}[${type}]]`
+          : `@Damage[${formula}]`;
+      }).join(', ');
+      damageSection = `
+        <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
+        <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
+        <hr>
+        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
+        </button>`;
+    }
+
+    const content = `
+      <div class="pf2e-afflictioner-save-request" style="border-color: #6B3FA0;">
+        <h3><i class="fas fa-hourglass-half"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_HEADING', { afflictionName: affliction.name })}</h3>
+        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_NOTE', { duration: intervalText })}</p>
+        ${effectsSummary}
+        <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_NO_SAVE')}</em></p>
+        ${damageSection}
+      </div>
+    `;
+
+    await ChatMessage.create({
+      content,
+      speaker: ChatMessage.getSpeaker({ token: token }),
+      whisper: game.users.filter(u => u.isGM).map(u => u.id)
+    });
+  }
+
+  static async postEffectIntervalTrigger(token, affliction) {
+    const actor = token.actor;
+    const stage = affliction.stages?.[affliction.currentStage - 1];
+    const effectInterval = stage?.effectInterval;
+    const effectIntervalText = effectInterval
+      ? `${effectInterval.value} ${effectInterval.unit}(s)`
+      : '';
+
+    // Effects summary
+    const effectParts = [];
+    if (stage?.conditions?.length) {
+      effectParts.push(`${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CONDITIONS_PREFIX')} ${stage.conditions.map(c => {
+        if (c.name === 'persistent damage' || c.name === 'persistent-damage') {
+          return game.i18n.format('PF2E_AFFLICTIONER.CHAT.PERSISTENT_DAMAGE_LABEL', { formula: c.persistentFormula || '1d6', type: c.persistentType || 'untyped' });
+        }
+        return c.value ? `${c.name} ${c.value}` : c.name;
+      }).join(', ')}`);
+    }
+    if (stage?.weakness?.length) {
+      effectParts.push(`${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.WEAKNESS_PREFIX')} ${stage.weakness.map(w => `${w.type} ${w.value}`).join(', ')}`);
+    }
+    const effectsSummary = effectParts.length
+      ? `<div style="margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.9em;">${effectParts.join(' • ')}</div>`
+      : '';
+
+    // Damage links
+    const hasDamage = stage?.damage?.length > 0;
+    let damageSection = '';
+    if (hasDamage) {
+      const damageLinks = stage.damage.map(d => {
+        const formula = (typeof d === 'string' ? d : d.formula || '').trim().replace(/\[.*$/, '');
+        const type = typeof d === 'object' ? d.type : 'untyped';
+        const isChoice = typeof d === 'object' && d.isChoice;
+        const altType = typeof d === 'object' ? d.alternativeType : null;
+
+        if (isChoice && altType) {
+          return `<div style="background: rgba(255, 165, 0, 0.15); padding: 8px; border-radius: 4px; border-left: 3px solid #992001; margin: 4px 0;">
+            <div style="font-weight: bold; color: #ff3300; margin-bottom: 4px; font-size: 0.9em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CHOOSE_ONE')}</div>
+            <div style="margin-left: 8px;">@Damage[${formula}[${type}]]</div>
+            <div style="margin: 4px 0 0 8px;"><strong style="color: #ff3300;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.OR')}</strong></div>
+            <div style="margin-left: 8px;">@Damage[${formula}[${altType}]]</div>
+          </div>`;
+        }
+        return type && type !== 'untyped' ? `@Damage[${formula}[${type}]]` : `@Damage[${formula}]`;
+      }).join(', ');
+
+      damageSection = `
+        <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
+        <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
+        <hr>
+        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
+        </button>`;
+    }
+
+    const content = `
+      <div class="pf2e-afflictioner-save-request" style="border-color: #6B3FA0;">
+        <h3><i class="fas fa-clock"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_HEADING', { afflictionName: affliction.name })}</h3>
+        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_NOTE', { duration: effectIntervalText })}</p>
+        <p>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CURRENT_STAGE_LABEL')} ${affliction.currentStage}</p>
+        ${effectsSummary}
+        <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_NO_SAVE')}</em></p>
+        ${damageSection}
+      </div>
+    `;
+
+    await ChatMessage.create({
+      content,
+      speaker: ChatMessage.getSpeaker({ token: token }),
+      whisper: game.users.filter(u => u.isGM).map(u => u.id)
+    });
+  }
 }

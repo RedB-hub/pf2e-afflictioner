@@ -56,6 +56,12 @@ export class AfflictionService {
       addedRound: combat ? combat.round : null,
       durationElapsed: 0,
       maxDurationElapsed: 0,
+      effectIntervalElapsed: 0,
+      nextEffectRound: null,
+      nextEffectTimestamp: null,
+      onsetEffectIntervalElapsed: 0,
+      nextOnsetEffectRound: null,
+      nextOnsetEffectTimestamp: null,
       nextSaveTimestamp: null,
       treatmentBonus: 0,
       treatedThisStage: false,
@@ -158,6 +164,19 @@ export class AfflictionService {
         updates.nextSaveTimestamp = game.time.worldTime + updates.onsetRemaining;
       }
 
+      updates.onsetEffectIntervalElapsed = 0;
+      updates.nextOnsetEffectRound = null;
+      updates.nextOnsetEffectTimestamp = null;
+
+      if (affliction.onsetEffectInterval) {
+        const onsetIntervalSeconds = AfflictionParser.durationToSeconds(affliction.onsetEffectInterval);
+        if (combat) {
+          updates.nextOnsetEffectRound = combat.round + Math.ceil(onsetIntervalSeconds / 6);
+        } else {
+          updates.nextOnsetEffectTimestamp = game.time.worldTime + onsetIntervalSeconds;
+        }
+      }
+
       await AfflictionStore.updateAffliction(token, affliction.id, updates);
       const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
 
@@ -190,6 +209,16 @@ export class AfflictionService {
       }
       if (initialDurationCopy?.value > 0) {
         updates.currentStageResolvedDuration = { value: initialDurationCopy.value, unit: initialDurationCopy.unit };
+      }
+
+      if (initialStage.effectInterval) {
+        const effectIntervalSeconds = AfflictionParser.durationToSeconds(initialStage.effectInterval);
+        if (combat) {
+          const effectRounds = Math.ceil(effectIntervalSeconds / 6);
+          updates.nextEffectRound = combat.round + effectRounds;
+        } else {
+          updates.nextEffectTimestamp = game.time.worldTime + effectIntervalSeconds;
+        }
       }
 
       await AfflictionStore.updateAffliction(token, affliction.id, updates);
@@ -343,6 +372,21 @@ export class AfflictionService {
       if (stageDurationCopy?.value > 0) {
         updates.currentStageResolvedDuration = { value: stageDurationCopy.value, unit: stageDurationCopy.unit };
       }
+    }
+
+    if (newStageData?.effectInterval) {
+      updates.effectIntervalElapsed = 0;
+      const effectIntervalSeconds = AfflictionParser.durationToSeconds(newStageData.effectInterval);
+      if (combat) {
+        const effectRounds = Math.ceil(effectIntervalSeconds / 6);
+        updates.nextEffectRound = combat.round + effectRounds;
+      } else {
+        updates.nextEffectTimestamp = game.time.worldTime + effectIntervalSeconds;
+      }
+    } else {
+      updates.effectIntervalElapsed = 0;
+      updates.nextEffectRound = null;
+      updates.nextEffectTimestamp = null;
     }
 
     await AfflictionStore.updateAffliction(token, affliction.id, updates);
@@ -517,12 +561,24 @@ export class AfflictionService {
     await AfflictionTimerService.checkDurations(token, combat);
   }
 
+  static async checkEffectIntervals(token, combat) {
+    await AfflictionTimerService.checkEffectIntervals(token, combat, this);
+  }
+
   static async checkWorldTimeMaxDuration(token, affliction, deltaSeconds) {
     return await AfflictionTimerService.checkWorldTimeMaxDuration(token, affliction, deltaSeconds);
   }
 
   static async checkWorldTimeSave(token, affliction, deltaSeconds) {
     await AfflictionTimerService.checkWorldTimeSave(token, affliction, deltaSeconds, this);
+  }
+
+  static async checkWorldTimeEffectInterval(token, affliction, deltaSeconds) {
+    await AfflictionTimerService.checkWorldTimeEffectInterval(token, affliction, deltaSeconds, this);
+  }
+
+  static async checkWorldTimeOnsetEffectInterval(token, affliction, deltaSeconds) {
+    await AfflictionTimerService.checkWorldTimeOnsetEffectInterval(token, affliction, deltaSeconds, this);
   }
 
   static _buildExpirationData(affliction, stage, token) {

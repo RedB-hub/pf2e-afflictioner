@@ -13,6 +13,27 @@
       <option value="week" {{#if (eq stage.duration.unit "week")}}selected{{/if}}>Week(s)</option>
     </select>
   </div>
+  <div class="form-group effect-interval-group">
+    <label>{{localize 'PF2E_AFFLICTIONER.EDITOR.EFFECT_INTERVAL'}} <i class="fas fa-info-circle effect-interval-info" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.EFFECT_INTERVAL_TOOLTIP'}}"></i></label>
+    {{#if stage.effectInterval}}
+      <input type="number" name="effectInterval.value" value="{{stage.effectInterval.value}}" min="1" placeholder="6" class="duration-value" />
+      <select name="effectInterval.unit" class="duration-unit">
+        <option value="round" {{#if (eq stage.effectInterval.unit "round")}}selected{{/if}}>Round(s)</option>
+        <option value="minute" {{#if (eq stage.effectInterval.unit "minute")}}selected{{/if}}>Minute(s)</option>
+        <option value="hour" {{#if (eq stage.effectInterval.unit "hour")}}selected{{/if}}>Hour(s)</option>
+        <option value="day" {{#if (eq stage.effectInterval.unit "day")}}selected{{/if}}>Day(s)</option>
+        <option value="week" {{#if (eq stage.effectInterval.unit "week")}}selected{{/if}}>Week(s)</option>
+      </select>
+      <button type="button" data-action="toggleEffectInterval" class="toggle-effect-interval-btn" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.REMOVE_EFFECT_INTERVAL'}}">
+        <i class="fas fa-times"></i>
+      </button>
+    {{else}}
+      <span class="no-effect-interval">{{localize 'PF2E_AFFLICTIONER.EDITOR.NO_EFFECT_INTERVAL'}}</span>
+      <button type="button" data-action="toggleEffectInterval" class="toggle-effect-interval-btn add-btn" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.ADD_EFFECT_INTERVAL'}}">
+        <i class="fas fa-plus"></i> {{localize 'PF2E_AFFLICTIONER.EDITOR.ADD_EFFECT_INTERVAL'}}
+      </button>
+    {{/if}}
+  </div>
   <div class="form-group effects-textarea-group">
     <label for="stage-effects">{{localize 'PF2E_AFFLICTIONER.EDITOR.INSTRUCTIONS'}}</label>
     <div class="effects-textarea-wrapper">

@@ -343,6 +343,115 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Onset Effect Interval group (mirrors onset-group style) */
+.affliction-editor .onset-effect-interval-group {
+  align-items: flex-start;
+}
+
+.affliction-editor .onset-effect-interval-group input[type="number"] {
+  flex: 0 0 80px;
+}
+
+.affliction-editor .onset-effect-interval-group select {
+  flex: 1;
+}
+
+.affliction-editor .onset-effect-interval-info {
+  color: #888;
+  font-size: 11px;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.affliction-editor .onset-effect-interval-info:hover {
+  color: var(--afflictioner-text-light);
+}
+
+/* Onset Effects section */
+.affliction-editor .onset-effects-section {
+  margin-bottom: 20px;
+}
+
+.affliction-editor .onset-subsection {
+  margin-bottom: 14px;
+}
+
+.affliction-editor .onset-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.affliction-editor .subsection-label {
+  color: var(--afflictioner-text-light);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.affliction-editor .onset-effects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.affliction-editor .onset-effects-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.affliction-editor .onset-effects-entry input,
+.affliction-editor .onset-effects-entry select {
+  padding: 4px 8px;
+  background: var(--afflictioner-bg-medium);
+  border: 1px solid var(--afflictioner-border);
+  border-radius: 4px;
+  color: var(--afflictioner-text-light);
+  font-size: 12px;
+}
+
+.affliction-editor .onset-formula {
+  flex: 1;
+}
+
+.affliction-editor .onset-type {
+  flex: 1;
+}
+
+.affliction-editor .onset-condition-name {
+  flex: 2;
+}
+
+.affliction-editor .onset-condition-value {
+  flex: 0 0 60px;
+}
+
+.affliction-editor .onset-weakness-type {
+  flex: 2;
+}
+
+.affliction-editor .onset-weakness-value {
+  flex: 0 0 60px;
+}
+
+/* Hide value input for valueless onset conditions */
+.affliction-editor .onset-effects-entry.no-value-condition .onset-condition-value {
+  display: none;
+}
+
+/* Effect Interval toggle in affliction editor stage preview */
+.affliction-editor .effect-interval-group {
+  align-items: flex-start;
+}
+
+.affliction-editor .no-effect-interval {
+  color: #888;
+  font-style: italic;
+  font-size: 13px;
+  flex: 1;
+}
+
 /* Stage Editor Dialog */
 .stage-editor {
   background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(40, 20, 20, 0.95) 100%);
@@ -420,6 +529,104 @@
   border-radius: 4px;
   color: var(--afflictioner-text-light);
   font-size: 13px;
+}
+
+/* Effect Interval group - matches duration-group-compact style */
+.stage-editor .effect-interval-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: var(--afflictioner-bg-dark);
+  border-radius: 6px;
+  border: 1px solid var(--afflictioner-border);
+}
+
+.stage-editor .effect-interval-group label {
+  min-width: auto;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--afflictioner-text-light);
+}
+
+.stage-editor .effect-interval-group .duration-value {
+  width: 60px;
+  flex: 0 0 60px;
+  padding: 4px 8px;
+  background: var(--afflictioner-bg-medium);
+  border: 1px solid var(--afflictioner-border);
+  border-radius: 4px;
+  color: var(--afflictioner-text-light);
+  font-size: 13px;
+}
+
+.stage-editor .effect-interval-group .duration-unit {
+  flex: 1;
+  max-width: 150px;
+  padding: 4px 8px;
+  background: var(--afflictioner-bg-medium);
+  border: 1px solid var(--afflictioner-border);
+  border-radius: 4px;
+  color: var(--afflictioner-text-light);
+  font-size: 13px;
+}
+
+.stage-editor .no-effect-interval {
+  flex: 1;
+  color: #888;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.stage-editor .effect-interval-info {
+  color: #888;
+  font-size: 11px;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.stage-editor .effect-interval-info:hover {
+  color: var(--afflictioner-text-light);
+}
+
+.stage-editor .toggle-effect-interval-btn {
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.stage-editor .toggle-effect-interval-btn.add-btn {
+  background: var(--afflictioner-primary);
+  border-color: var(--afflictioner-primary-hover);
+  color: var(--afflictioner-text-light);
+}
+
+.stage-editor .toggle-effect-interval-btn.add-btn:hover {
+  background: var(--afflictioner-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(139, 0, 0, 0.4);
+}
+
+.stage-editor .toggle-effect-interval-btn:not(.add-btn) {
+  background: #7c2a2a;
+  border-color: #8c3a3a;
+  color: var(--afflictioner-text-light);
+  padding: 4px 8px;
+}
+
+.stage-editor .toggle-effect-interval-btn:not(.add-btn):hover {
+  background: #8c3a3a;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(124, 42, 42, 0.4);
 }
 
 .stage-editor .form-group.effects-textarea-group {

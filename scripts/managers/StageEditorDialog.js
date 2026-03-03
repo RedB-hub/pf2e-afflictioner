@@ -30,6 +30,7 @@ export class StageEditorDialog extends foundry.applications.api.HandlebarsApplic
       removeRuleElement: StageEditorDialog.removeRuleElement,
       removeEffect: StageEditorDialog.removeEffect,
       removeAllEffects: StageEditorDialog.removeAllEffects,
+      toggleEffectInterval: StageEditorDialog.toggleEffectInterval,
       saveStage: StageEditorDialog.saveStage,
       cancelStageEdit: StageEditorDialog.cancelStageEdit
     }
@@ -1034,6 +1035,16 @@ export class StageEditorDialog extends foundry.applications.api.HandlebarsApplic
       };
     }
 
+    if (formData['effectInterval.value'] !== undefined || formData.effectInterval) {
+      const effectValue = parseInt(formData['effectInterval.value'] || formData.effectInterval?.value);
+      const effectUnit = formData['effectInterval.unit'] || formData.effectInterval?.unit || 'hour';
+      if (effectValue > 0) {
+        this.stageData.effectInterval = { value: effectValue, unit: effectUnit };
+      } else {
+        this.stageData.effectInterval = null;
+      }
+    }
+
     const damageArray = [];
     if (formData.damage !== undefined) {
       const arr = Array.isArray(formData.damage) ? formData.damage : [formData.damage];
@@ -1133,6 +1144,23 @@ export class StageEditorDialog extends foundry.applications.api.HandlebarsApplic
           value: parseInt(w.value) || 0
         }));
     }
+  }
+
+  static async toggleEffectInterval(_event, _button) {
+    const dialog = this;
+
+    if (dialog.stageData.effectInterval && dialog.stageData.effectInterval.value > 0) {
+      dialog.stageData.effectInterval = null;
+      ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.EDITOR.EFFECT_INTERVAL_REMOVED'));
+    } else {
+      dialog.stageData.effectInterval = {
+        value: 6,
+        unit: 'hour'
+      };
+      ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.EDITOR.EFFECT_INTERVAL_ADDED'));
+    }
+
+    await dialog.render({ force: true });
   }
 
   static async saveStage(_event, _button) {

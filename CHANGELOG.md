@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-02
+
+### Added
+
+- **Onset Effects dropdowns**: Condition name, damage type, and weakness type in the Onset Effects section are now dropdowns matching the Stage Editor, with the full PF2e condition list, damage types, and weakness type groups.
+- **Effect interval chat improvements**: Onset interval messages now include a conditions/weakness summary alongside the existing damage links. Stage interval messages now include a conditions/weakness summary and inline damage links; damage previously appeared as a separate second message.
+- **Per-stage Effect Interval**: Each affliction stage can now have an independent Effect Interval — a recurring timer that re-applies full stage effects (conditions, damage, auto-effects) without triggering a saving throw. Separate from and independent of Save Duration. Example: a disease that deals damage every 6 hours but only allows a save every 48 hours.
+- **Effect Interval editor UI**: Added Effect Interval toggle to the Stage Editor dialog, with value/unit inputs matching the existing Duration style. An info tooltip explains the feature on hover.
+- **Effect Interval chat notification**: When an Effect Interval fires, a purple-bordered chat message is posted to the GM noting the affliction name, actor, current stage, and that no save is triggered.
+
+### Fixed
+
+- **Editor showing stale data on reopen**: Opening the editor a second time showed the original affliction data instead of any previously saved edits.
+
 ## [1.4.2] - 2026-03-01
 
 ### Fixed

@@ -47,6 +47,30 @@
       {{/if}}
     </div>
 
+    {{#if affliction.onset}}
+    <div class="form-group onset-effect-interval-group">
+      <label>{{localize 'PF2E_AFFLICTIONER.EDITOR.ONSET_EFFECT_INTERVAL'}} <i class="fas fa-info-circle onset-effect-interval-info" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.ONSET_EFFECT_INTERVAL_TOOLTIP'}}"></i></label>
+      {{#if affliction.onsetEffectInterval}}
+        <input type="number" name="onsetEffectInterval.value" value="{{affliction.onsetEffectInterval.value}}" min="1" placeholder="6" />
+        <select name="onsetEffectInterval.unit">
+          <option value="round" {{#if (eq affliction.onsetEffectInterval.unit "round")}}selected{{/if}}>Round(s)</option>
+          <option value="minute" {{#if (eq affliction.onsetEffectInterval.unit "minute")}}selected{{/if}}>Minute(s)</option>
+          <option value="hour" {{#if (eq affliction.onsetEffectInterval.unit "hour")}}selected{{/if}}>Hour(s)</option>
+          <option value="day" {{#if (eq affliction.onsetEffectInterval.unit "day")}}selected{{/if}}>Day(s)</option>
+          <option value="week" {{#if (eq affliction.onsetEffectInterval.unit "week")}}selected{{/if}}>Week(s)</option>
+        </select>
+        <button type="button" data-action="toggleOnsetEffectInterval" class="toggle-onset-btn" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.REMOVE_ONSET_EFFECT_INTERVAL'}}">
+          <i class="fas fa-times"></i>
+        </button>
+      {{else}}
+        <span class="no-onset">{{localize 'PF2E_AFFLICTIONER.EDITOR.NO_ONSET_EFFECT_INTERVAL'}}</span>
+        <button type="button" data-action="toggleOnsetEffectInterval" class="toggle-onset-btn add-btn" data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.ADD_ONSET_EFFECT_INTERVAL'}}">
+          <i class="fas fa-plus"></i> {{localize 'PF2E_AFFLICTIONER.EDITOR.ADD_ONSET_EFFECT_INTERVAL'}}
+        </button>
+      {{/if}}
+    </div>
+    {{/if}}
+
     <div class="form-group max-duration-group">
       <label>{{localize 'PF2E_AFFLICTIONER.EDITOR.MAX_DURATION'}}</label>
       {{#if affliction.maxDuration}}
@@ -68,7 +92,209 @@
         </button>
       {{/if}}
     </div>
+
   </section>
+  {{#if affliction.onsetEffectInterval}}
+  <section class="editor-section onset-effects-section">
+    <h4>{{localize 'PF2E_AFFLICTIONER.EDITOR.ONSET_EFFECTS'}}</h4>
+
+    <div class="onset-subsection">
+      <div class="section-header-with-actions">
+        <span class="subsection-label">{{localize 'PF2E_AFFLICTIONER.EDITOR.DAMAGE'}}</span>
+        <button type="button" data-action="addOnsetDamage" class="add-stage-btn"><i class="fas fa-plus"></i></button>
+      </div>
+      <div class="onset-effects-list">
+        {{#each affliction.onsetDamage}}
+          <div class="onset-effects-entry">
+            <input type="text" name="onsetDamage.{{@index}}.formula" value="{{formula}}" placeholder="2d6" class="onset-formula" />
+            <select name="onsetDamage.{{@index}}.type" class="onset-type">
+              <option value="">Type...</option>
+              <option value="acid" {{#if (eq type "acid")}}selected{{/if}}>Acid</option>
+              <option value="bleed" {{#if (eq type "bleed")}}selected{{/if}}>Bleed</option>
+              <option value="bludgeoning" {{#if (eq type "bludgeoning")}}selected{{/if}}>Bludgeoning</option>
+              <option value="cold" {{#if (eq type "cold")}}selected{{/if}}>Cold</option>
+              <option value="electricity" {{#if (eq type "electricity")}}selected{{/if}}>Electricity</option>
+              <option value="fire" {{#if (eq type "fire")}}selected{{/if}}>Fire</option>
+              <option value="force" {{#if (eq type "force")}}selected{{/if}}>Force</option>
+              <option value="mental" {{#if (eq type "mental")}}selected{{/if}}>Mental</option>
+              <option value="piercing" {{#if (eq type "piercing")}}selected{{/if}}>Piercing</option>
+              <option value="poison" {{#if (eq type "poison")}}selected{{/if}}>Poison</option>
+              <option value="slashing" {{#if (eq type "slashing")}}selected{{/if}}>Slashing</option>
+              <option value="sonic" {{#if (eq type "sonic")}}selected{{/if}}>Sonic</option>
+              <option value="spirit" {{#if (eq type "spirit")}}selected{{/if}}>Spirit</option>
+              <option value="vitality" {{#if (eq type "vitality")}}selected{{/if}}>Vitality</option>
+              <option value="void" {{#if (eq type "void")}}selected{{/if}}>Void</option>
+              <option value="untyped" {{#if (eq type "untyped")}}selected{{/if}}>Untyped</option>
+            </select>
+            <button type="button" data-action="removeOnsetDamage" data-index="{{@index}}" class="remove-stage-btn"><i class="fas fa-times"></i></button>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="onset-subsection">
+      <div class="section-header-with-actions">
+        <span class="subsection-label">{{localize 'PF2E_AFFLICTIONER.EDITOR.CONDITIONS'}}</span>
+        <button type="button" data-action="addOnsetCondition" class="add-stage-btn"><i class="fas fa-plus"></i></button>
+      </div>
+      <div class="onset-effects-list">
+        {{#each affliction.onsetConditions}}
+          <div class="onset-effects-entry{{#if isValueless}} no-value-condition{{/if}}">
+            <select name="onsetConditions.{{@index}}.name" class="onset-condition-name" onchange="const vl=['blinded','concealed','confused','controlled','dazzled','deafened','encumbered','fascinated','fatigued','fleeing','grabbed','hidden','immobilized','invisible','observed','off-guard','paralyzed','petrified','prone','quickened','restrained','unconscious','undetected'];this.closest('.onset-effects-entry').classList.toggle('no-value-condition', vl.includes(this.value))">
+              <option value="">Select condition...</option>
+              <option value="blinded" {{#if (eq name "blinded")}}selected{{/if}}>Blinded</option>
+              <option value="clumsy" {{#if (eq name "clumsy")}}selected{{/if}}>Clumsy</option>
+              <option value="concealed" {{#if (eq name "concealed")}}selected{{/if}}>Concealed</option>
+              <option value="confused" {{#if (eq name "confused")}}selected{{/if}}>Confused</option>
+              <option value="controlled" {{#if (eq name "controlled")}}selected{{/if}}>Controlled</option>
+              <option value="dazzled" {{#if (eq name "dazzled")}}selected{{/if}}>Dazzled</option>
+              <option value="deafened" {{#if (eq name "deafened")}}selected{{/if}}>Deafened</option>
+              <option value="doomed" {{#if (eq name "doomed")}}selected{{/if}}>Doomed</option>
+              <option value="drained" {{#if (eq name "drained")}}selected{{/if}}>Drained</option>
+              <option value="dying" {{#if (eq name "dying")}}selected{{/if}}>Dying</option>
+              <option value="encumbered" {{#if (eq name "encumbered")}}selected{{/if}}>Encumbered</option>
+              <option value="enfeebled" {{#if (eq name "enfeebled")}}selected{{/if}}>Enfeebled</option>
+              <option value="fascinated" {{#if (eq name "fascinated")}}selected{{/if}}>Fascinated</option>
+              <option value="fatigued" {{#if (eq name "fatigued")}}selected{{/if}}>Fatigued</option>
+              <option value="fleeing" {{#if (eq name "fleeing")}}selected{{/if}}>Fleeing</option>
+              <option value="frightened" {{#if (eq name "frightened")}}selected{{/if}}>Frightened</option>
+              <option value="grabbed" {{#if (eq name "grabbed")}}selected{{/if}}>Grabbed</option>
+              <option value="hidden" {{#if (eq name "hidden")}}selected{{/if}}>Hidden</option>
+              <option value="immobilized" {{#if (eq name "immobilized")}}selected{{/if}}>Immobilized</option>
+              <option value="invisible" {{#if (eq name "invisible")}}selected{{/if}}>Invisible</option>
+              <option value="observed" {{#if (eq name "observed")}}selected{{/if}}>Observed</option>
+              <option value="off-guard" {{#if (eq name "off-guard")}}selected{{/if}}>Off-Guard</option>
+              <option value="paralyzed" {{#if (eq name "paralyzed")}}selected{{/if}}>Paralyzed</option>
+              <option value="persistent damage" {{#if (eq name "persistent damage")}}selected{{/if}}>Persistent Damage</option>
+              <option value="petrified" {{#if (eq name "petrified")}}selected{{/if}}>Petrified</option>
+              <option value="prone" {{#if (eq name "prone")}}selected{{/if}}>Prone</option>
+              <option value="quickened" {{#if (eq name "quickened")}}selected{{/if}}>Quickened</option>
+              <option value="restrained" {{#if (eq name "restrained")}}selected{{/if}}>Restrained</option>
+              <option value="sickened" {{#if (eq name "sickened")}}selected{{/if}}>Sickened</option>
+              <option value="slowed" {{#if (eq name "slowed")}}selected{{/if}}>Slowed</option>
+              <option value="stunned" {{#if (eq name "stunned")}}selected{{/if}}>Stunned</option>
+              <option value="stupefied" {{#if (eq name "stupefied")}}selected{{/if}}>Stupefied</option>
+              <option value="unconscious" {{#if (eq name "unconscious")}}selected{{/if}}>Unconscious</option>
+              <option value="undetected" {{#if (eq name "undetected")}}selected{{/if}}>Undetected</option>
+              <option value="wounded" {{#if (eq name "wounded")}}selected{{/if}}>Wounded</option>
+            </select>
+            <input type="number" name="onsetConditions.{{@index}}.value" value="{{value}}" placeholder="1" min="0" max="4" class="onset-condition-value" />
+            <button type="button" data-action="removeOnsetCondition" data-index="{{@index}}" class="remove-stage-btn"><i class="fas fa-times"></i></button>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="onset-subsection">
+      <div class="section-header-with-actions">
+        <span class="subsection-label">{{localize 'PF2E_AFFLICTIONER.EDITOR.WEAKNESS'}}</span>
+        <button type="button" data-action="addOnsetWeakness" class="add-stage-btn"><i class="fas fa-plus"></i></button>
+      </div>
+      <div class="onset-effects-list">
+        {{#each affliction.onsetWeakness}}
+          <div class="onset-effects-entry">
+            <select name="onsetWeakness.{{@index}}.type" class="onset-weakness-type">
+              <option value="">Select type...</option>
+              <optgroup label="Energy & Damage">
+                <option value="acid" {{#if (eq type "acid")}}selected{{/if}}>Acid</option>
+                <option value="cold" {{#if (eq type "cold")}}selected{{/if}}>Cold</option>
+                <option value="electricity" {{#if (eq type "electricity")}}selected{{/if}}>Electricity</option>
+                <option value="fire" {{#if (eq type "fire")}}selected{{/if}}>Fire</option>
+                <option value="sonic" {{#if (eq type "sonic")}}selected{{/if}}>Sonic</option>
+                <option value="force" {{#if (eq type "force")}}selected{{/if}}>Force</option>
+                <option value="vitality" {{#if (eq type "vitality")}}selected{{/if}}>Vitality</option>
+                <option value="void" {{#if (eq type "void")}}selected{{/if}}>Void</option>
+              </optgroup>
+              <optgroup label="Physical">
+                <option value="physical" {{#if (eq type "physical")}}selected{{/if}}>Physical (All)</option>
+                <option value="bludgeoning" {{#if (eq type "bludgeoning")}}selected{{/if}}>Bludgeoning</option>
+                <option value="piercing" {{#if (eq type "piercing")}}selected{{/if}}>Piercing</option>
+                <option value="slashing" {{#if (eq type "slashing")}}selected{{/if}}>Slashing</option>
+              </optgroup>
+              <optgroup label="Special">
+                <option value="bleed" {{#if (eq type "bleed")}}selected{{/if}}>Bleed</option>
+                <option value="mental" {{#if (eq type "mental")}}selected{{/if}}>Mental</option>
+                <option value="poison" {{#if (eq type "poison")}}selected{{/if}}>Poison</option>
+                <option value="spirit" {{#if (eq type "spirit")}}selected{{/if}}>Spirit</option>
+                <option value="emotion" {{#if (eq type "emotion")}}selected{{/if}}>Emotion</option>
+              </optgroup>
+              <optgroup label="Materials">
+                <option value="cold-iron" {{#if (eq type "cold-iron")}}selected{{/if}}>Cold Iron</option>
+                <option value="silver" {{#if (eq type "silver")}}selected{{/if}}>Silver</option>
+                <option value="adamantine" {{#if (eq type "adamantine")}}selected{{/if}}>Adamantine</option>
+                <option value="orichalcum" {{#if (eq type "orichalcum")}}selected{{/if}}>Orichalcum</option>
+                <option value="abysium" {{#if (eq type "abysium")}}selected{{/if}}>Abysium</option>
+                <option value="dawnsilver" {{#if (eq type "dawnsilver")}}selected{{/if}}>Dawnsilver</option>
+                <option value="djezet" {{#if (eq type "djezet")}}selected{{/if}}>Djezet</option>
+                <option value="duskwood" {{#if (eq type "duskwood")}}selected{{/if}}>Duskwood</option>
+                <option value="inubrix" {{#if (eq type "inubrix")}}selected{{/if}}>Inubrix</option>
+                <option value="noqual" {{#if (eq type "noqual")}}selected{{/if}}>Noqual</option>
+                <option value="peachwood" {{#if (eq type "peachwood")}}selected{{/if}}>Peachwood</option>
+                <option value="siccatite" {{#if (eq type "siccatite")}}selected{{/if}}>Siccatite</option>
+              </optgroup>
+              <optgroup label="Alignment">
+                <option value="holy" {{#if (eq type "holy")}}selected{{/if}}>Holy</option>
+                <option value="unholy" {{#if (eq type "unholy")}}selected{{/if}}>Unholy</option>
+              </optgroup>
+              <optgroup label="Traditions">
+                <option value="arcane" {{#if (eq type "arcane")}}selected{{/if}}>Arcane</option>
+                <option value="divine" {{#if (eq type "divine")}}selected{{/if}}>Divine</option>
+                <option value="occult" {{#if (eq type "occult")}}selected{{/if}}>Occult</option>
+                <option value="primal" {{#if (eq type "primal")}}selected{{/if}}>Primal</option>
+              </optgroup>
+              <optgroup label="Properties">
+                <option value="magical" {{#if (eq type "magical")}}selected{{/if}}>Magical</option>
+                <option value="non-magical" {{#if (eq type "non-magical")}}selected{{/if}}>Non-Magical</option>
+                <option value="ghost-touch" {{#if (eq type "ghost-touch")}}selected{{/if}}>Ghost Touch</option>
+                <option value="alchemical" {{#if (eq type "alchemical")}}selected{{/if}}>Alchemical</option>
+              </optgroup>
+              <optgroup label="Specialized">
+                <option value="area-damage" {{#if (eq type "area-damage")}}selected{{/if}}>Area Damage</option>
+                <option value="critical-hits" {{#if (eq type "critical-hits")}}selected{{/if}}>Critical Hits</option>
+                <option value="precision" {{#if (eq type "precision")}}selected{{/if}}>Precision</option>
+                <option value="splash-damage" {{#if (eq type "splash-damage")}}selected{{/if}}>Splash Damage</option>
+                <option value="persistent-damage" {{#if (eq type "persistent-damage")}}selected{{/if}}>Persistent Damage</option>
+                <option value="spells" {{#if (eq type "spells")}}selected{{/if}}>Spells</option>
+                <option value="weapons" {{#if (eq type "weapons")}}selected{{/if}}>Weapons</option>
+                <option value="unarmed-attacks" {{#if (eq type "unarmed-attacks")}}selected{{/if}}>Unarmed Attacks</option>
+              </optgroup>
+              <optgroup label="Rare/Special">
+                <option value="arrow-vulnerability" {{#if (eq type "arrow-vulnerability")}}selected{{/if}}>Arrow Vulnerability</option>
+                <option value="axe-vulnerability" {{#if (eq type "axe-vulnerability")}}selected{{/if}}>Axe Vulnerability</option>
+                <option value="vampire-weaknesses" {{#if (eq type "vampire-weaknesses")}}selected{{/if}}>Vampire Weaknesses</option>
+                <option value="vulnerable-to-sunlight" {{#if (eq type "vulnerable-to-sunlight")}}selected{{/if}}>Vulnerable to Sunlight</option>
+                <option value="vorpal" {{#if (eq type "vorpal")}}selected{{/if}}>Vorpal</option>
+                <option value="vorpal-fear" {{#if (eq type "vorpal-fear")}}selected{{/if}}>Vorpal Fear</option>
+                <option value="weapons-shedding-bright-light" {{#if (eq type "weapons-shedding-bright-light")}}selected{{/if}}>Weapons Shedding Bright Light</option>
+              </optgroup>
+              <optgroup label="Elemental">
+                <option value="air" {{#if (eq type "air")}}selected{{/if}}>Air</option>
+                <option value="earth" {{#if (eq type "earth")}}selected{{/if}}>Earth</option>
+                <option value="water" {{#if (eq type "water")}}selected{{/if}}>Water</option>
+                <option value="salt-water" {{#if (eq type "salt-water")}}selected{{/if}}>Salt Water</option>
+                <option value="salt" {{#if (eq type "salt")}}selected{{/if}}>Salt</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="all-damage" {{#if (eq type "all-damage")}}selected{{/if}}>All Damage</option>
+                <option value="energy" {{#if (eq type "energy")}}selected{{/if}}>Energy</option>
+                <option value="glass" {{#if (eq type "glass")}}selected{{/if}}>Glass</option>
+                <option value="light" {{#if (eq type "light")}}selected{{/if}}>Light</option>
+                <option value="metal" {{#if (eq type "metal")}}selected{{/if}}>Metal</option>
+                <option value="plant" {{#if (eq type "plant")}}selected{{/if}}>Plant</option>
+                <option value="radiation" {{#if (eq type "radiation")}}selected{{/if}}>Radiation</option>
+                <option value="time" {{#if (eq type "time")}}selected{{/if}}>Time</option>
+                <option value="wood" {{#if (eq type "wood")}}selected{{/if}}>Wood</option>
+              </optgroup>
+            </select>
+            <input type="number" name="onsetWeakness.{{@index}}.value" value="{{value}}" placeholder="5" min="1" class="onset-weakness-value" />
+            <button type="button" data-action="removeOnsetWeakness" data-index="{{@index}}" class="remove-stage-btn"><i class="fas fa-times"></i></button>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+  </section>
+  {{/if}}
+
   <section class="editor-section stages-section">
     <div class="section-header-with-actions">
       <h4>{{localize 'PF2E_AFFLICTIONER.EDITOR.STAGES'}}</h4>
@@ -101,6 +327,13 @@
             <strong>{{localize 'PF2E_AFFLICTIONER.EDITOR.DURATION'}}:</strong>
             <span>{{duration.value}} {{duration.unit}}(s)</span>
           </div>
+
+          {{#if effectInterval}}
+            <div class="stage-field">
+              <strong>{{localize 'PF2E_AFFLICTIONER.EDITOR.EFFECT_INTERVAL'}}:</strong>
+              <span>{{effectInterval.value}} {{effectInterval.unit}}(s)</span>
+            </div>
+          {{/if}}
 
           {{#if damage.length}}
             <div class="stage-field">

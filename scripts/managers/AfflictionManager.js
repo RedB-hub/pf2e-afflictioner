@@ -1,6 +1,8 @@
 import * as AfflictionStore from '../stores/AfflictionStore.js';
+import * as AfflictionDefinitionStore from '../stores/AfflictionDefinitionStore.js';
 import * as WeaponCoatingStore from '../stores/WeaponCoatingStore.js';
 import { AfflictionService } from '../services/AfflictionService.js';
+import { AfflictionEditorService } from '../services/AfflictionEditorService.js';
 import { TreatmentService } from '../services/TreatmentService.js';
 import { CounteractService } from '../services/CounteractService.js';
 import { AfflictionParser } from '../services/AfflictionParser.js';
@@ -600,7 +602,12 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     }
 
     const { AfflictionEditorDialog } = await import('./AfflictionEditorDialog.js');
-    new AfflictionEditorDialog(affliction).render(true);
+    const key = AfflictionDefinitionStore.generateDefinitionKey(affliction);
+    const existingEdit = key ? AfflictionDefinitionStore.getEditedDefinition(key) : null;
+    const afflictionData = existingEdit
+      ? AfflictionEditorService.applyEditedDefinition(affliction, existingEdit)
+      : affliction;
+    new AfflictionEditorDialog(afflictionData).render(true);
   }
 
   static async clearAllAfflictions(_event, _button) {

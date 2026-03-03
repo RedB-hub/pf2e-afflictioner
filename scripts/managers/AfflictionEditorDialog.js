@@ -3,6 +3,7 @@ import * as AfflictionStore from '../stores/AfflictionStore.js';
 import { AfflictionEditorService } from '../services/AfflictionEditorService.js';
 import { AfflictionService } from '../services/AfflictionService.js';
 import { StageEditorDialog } from './StageEditorDialog.js';
+import { VALUELESS_CONDITIONS } from '../constants.js';
 
 export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsApplicationMixin(
   foundry.applications.api.ApplicationV2
@@ -25,6 +26,13 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
       addStage: AfflictionEditorDialog.addStage,
       removeStage: AfflictionEditorDialog.removeStage,
       toggleOnset: AfflictionEditorDialog.toggleOnset,
+      toggleOnsetEffectInterval: AfflictionEditorDialog.toggleOnsetEffectInterval,
+      addOnsetDamage: AfflictionEditorDialog.addOnsetDamage,
+      removeOnsetDamage: AfflictionEditorDialog.removeOnsetDamage,
+      addOnsetCondition: AfflictionEditorDialog.addOnsetCondition,
+      removeOnsetCondition: AfflictionEditorDialog.removeOnsetCondition,
+      addOnsetWeakness: AfflictionEditorDialog.addOnsetWeakness,
+      removeOnsetWeakness: AfflictionEditorDialog.removeOnsetWeakness,
       toggleMaxDuration: AfflictionEditorDialog.toggleMaxDuration,
       saveChanges: AfflictionEditorDialog.saveChanges,
       cancelEdit: AfflictionEditorDialog.cancelEdit,
@@ -61,6 +69,13 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
           stage.enrichedEffects = await TextEditorClass.enrichHTML(stage.effects, { async: true });
         }
       }
+    }
+
+    if (affliction.onsetConditions) {
+      affliction.onsetConditions = affliction.onsetConditions.map(c => ({
+        ...c,
+        isValueless: VALUELESS_CONDITIONS.includes(c.name?.toLowerCase())
+      }));
     }
 
     return {
@@ -148,6 +163,10 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
 
     if (dialog.editedData.onset && dialog.editedData.onset.value > 0) {
       dialog.editedData.onset = null;
+      dialog.editedData.onsetEffectInterval = null;
+      dialog.editedData.onsetDamage = [];
+      dialog.editedData.onsetConditions = [];
+      dialog.editedData.onsetWeakness = [];
       ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.EDITOR.ONSET_REMOVED'));
     } else {
       dialog.editedData.onset = {
@@ -158,6 +177,104 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
     }
 
     await dialog.render({ force: true });
+  }
+
+  static async toggleOnsetEffectInterval(_event, _button) {
+    const dialog = this;
+
+    if (dialog.editedData.onsetEffectInterval) {
+      dialog.editedData.onsetEffectInterval = null;
+      ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.EDITOR.ONSET_EFFECT_INTERVAL_REMOVED'));
+    } else {
+      dialog.editedData.onsetEffectInterval = { value: 6, unit: 'hour' };
+      ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.EDITOR.ONSET_EFFECT_INTERVAL_ADDED'));
+    }
+
+    await dialog.render({ force: true });
+  }
+
+  static async addOnsetDamage(_event, _button) {
+    const dialog = this;
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetDamage.push({ formula: '', type: '' });
+    await dialog.render({ force: true });
+  }
+
+  static async removeOnsetDamage(_event, button) {
+    const dialog = this;
+    const index = parseInt(button.dataset.index);
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetDamage.splice(index, 1);
+    await dialog.render({ force: true });
+  }
+
+  static async addOnsetCondition(_event, _button) {
+    const dialog = this;
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetConditions.push({ name: '', value: null });
+    await dialog.render({ force: true });
+  }
+
+  static async removeOnsetCondition(_event, button) {
+    const dialog = this;
+    const index = parseInt(button.dataset.index);
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetConditions.splice(index, 1);
+    await dialog.render({ force: true });
+  }
+
+  static async addOnsetWeakness(_event, _button) {
+    const dialog = this;
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetWeakness.push({ type: '', value: 0 });
+    await dialog.render({ force: true });
+  }
+
+  static async removeOnsetWeakness(_event, button) {
+    const dialog = this;
+    const index = parseInt(button.dataset.index);
+    const FormDataClass = foundry.applications?.ux?.FormDataExtended || FormDataExtended;
+    const formData = new FormDataClass(dialog.element).object;
+    dialog._syncOnsetEffectsFromForm(formData);
+    dialog.editedData.onsetWeakness.splice(index, 1);
+    await dialog.render({ force: true });
+  }
+
+  _syncOnsetEffectsFromForm(formData) {
+    const onsetDamage = [];
+    let i = 0;
+    while (formData[`onsetDamage.${i}.formula`] !== undefined) {
+      onsetDamage.push({ formula: formData[`onsetDamage.${i}.formula`] || '', type: formData[`onsetDamage.${i}.type`] || '' });
+      i++;
+    }
+    this.editedData.onsetDamage = onsetDamage;
+
+    const onsetConditions = [];
+    i = 0;
+    while (formData[`onsetConditions.${i}.name`] !== undefined) {
+      const val = formData[`onsetConditions.${i}.value`];
+      onsetConditions.push({ name: formData[`onsetConditions.${i}.name`] || '', value: val !== undefined && val !== '' ? parseInt(val) : null });
+      i++;
+    }
+    this.editedData.onsetConditions = onsetConditions;
+
+    const onsetWeakness = [];
+    i = 0;
+    while (formData[`onsetWeakness.${i}.type`] !== undefined) {
+      onsetWeakness.push({ type: formData[`onsetWeakness.${i}.type`] || '', value: parseInt(formData[`onsetWeakness.${i}.value`]) || 0 });
+      i++;
+    }
+    this.editedData.onsetWeakness = onsetWeakness;
   }
 
   static async toggleMaxDuration(_event, _button) {
@@ -205,6 +322,20 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
         dialog.editedData.onset = null;
       }
     }
+
+    if (formData['onsetEffectInterval.value'] !== undefined || formData.onsetEffectInterval) {
+      const intervalValue = parseInt(formData['onsetEffectInterval.value'] || formData.onsetEffectInterval?.value);
+      const intervalUnit = formData['onsetEffectInterval.unit'] || formData.onsetEffectInterval?.unit || 'hour';
+      if (intervalValue > 0) {
+        dialog.editedData.onsetEffectInterval = { value: intervalValue, unit: intervalUnit };
+      } else {
+        dialog.editedData.onsetEffectInterval = null;
+      }
+    } else if (!dialog.editedData.onsetEffectInterval) {
+      dialog.editedData.onsetEffectInterval = null;
+    }
+
+    dialog._syncOnsetEffectsFromForm(formData);
 
     if (formData['maxDuration.value'] !== undefined || formData.maxDuration) {
       const maxDurationValue = parseInt(formData['maxDuration.value'] || formData.maxDuration?.value);
@@ -266,7 +397,8 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
             saveType: editedData.saveType,
             stages: editedData.stages,
             isVirulent: editedData.isVirulent,
-            multipleExposure: editedData.multipleExposure
+            multipleExposure: editedData.multipleExposure,
+            onset: editedData.onset || null
           };
 
           if (editedData.maxDuration) {
@@ -274,6 +406,11 @@ export class AfflictionEditorDialog extends foundry.applications.api.HandlebarsA
           } else {
             updates.maxDuration = null;
           }
+
+          updates.onsetEffectInterval = editedData.onsetEffectInterval || null;
+          updates.onsetDamage = editedData.onsetDamage || [];
+          updates.onsetConditions = editedData.onsetConditions || [];
+          updates.onsetWeakness = editedData.onsetWeakness || [];
 
           await AfflictionStore.updateAffliction(token, id, updates);
 

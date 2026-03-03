@@ -29,7 +29,7 @@ export class AfflictionTimerService {
           const resolvedDuration = durationCopy?.value > 0
             ? { value: durationCopy.value, unit: durationCopy.unit }
             : undefined;
-          await AfflictionStore.updateAffliction(token, id, {
+          const onsetUpdates = {
             inOnset: false,
             currentStage: targetStage,
             onsetRemaining: 0,
@@ -37,7 +37,16 @@ export class AfflictionTimerService {
             nextSaveRound: combat.round + durationRounds,
             ...(resolvedDuration && { currentStageResolvedDuration: resolvedDuration }),
             nextSaveInitiative: tokenCombatant?.initiative
-          });
+          };
+
+          if (stageData.effectInterval) {
+            const effectIntervalSeconds = AfflictionParser.durationToSeconds(stageData.effectInterval);
+            const effectRounds = Math.ceil(effectIntervalSeconds / 6);
+            onsetUpdates.effectIntervalElapsed = 0;
+            onsetUpdates.nextEffectRound = combat.round + effectRounds;
+          }
+
+          await AfflictionStore.updateAffliction(token, id, onsetUpdates);
 
           const updatedAffliction = AfflictionStore.getAffliction(token, id);
           await AfflictionService.applyStageEffects(token, updatedAffliction, stageData);
@@ -46,9 +55,26 @@ export class AfflictionTimerService {
             await AfflictionService.promptDamage(token, updatedAffliction);
           }
         } else {
-          await AfflictionStore.updateAffliction(token, id, {
-            onsetRemaining: newRemaining
-          });
+          const updates = { onsetRemaining: newRemaining };
+
+          if (affliction.onsetEffectInterval && affliction.nextOnsetEffectRound && combat.round >= affliction.nextOnsetEffectRound) {
+            const syntheticOnsetStage = {
+              effects: '',
+              conditions: affliction.onsetConditions || [],
+              weakness: affliction.onsetWeakness || [],
+              damage: affliction.onsetDamage || [],
+              autoEffects: [],
+              ruleElements: []
+            };
+            await AfflictionService.applyStageEffects(token, affliction, syntheticOnsetStage);
+            await AfflictionChatService.postOnsetEffectIntervalTrigger(token, affliction);
+
+            const intervalSeconds = AfflictionParser.durationToSeconds(affliction.onsetEffectInterval);
+            const intervalRounds = Math.ceil(intervalSeconds / 6);
+            updates.nextOnsetEffectRound = combat.round + intervalRounds;
+          }
+
+          await AfflictionStore.updateAffliction(token, id, updates);
         }
       }
     }
@@ -112,6 +138,91 @@ export class AfflictionTimerService {
     }
 
     return false;
+  }
+
+  static async checkEffectIntervals(token, combat, AfflictionService) {
+    const afflictions = AfflictionStore.getAfflictions(token);
+
+    for (const [_id, affliction] of Object.entries(afflictions)) {
+      if (affliction.inOnset) continue;
+      if (shouldSkipAffliction(affliction)) continue;
+      if (!affliction.currentStage || affliction.currentStage === 0) continue;
+
+      const stage = affliction.stages[affliction.currentStage - 1];
+      if (!stage || !stage.effectInterval) continue;
+
+      if (affliction.nextEffectRound && combat.round >= affliction.nextEffectRound) {
+        await AfflictionService.applyStageEffects(token, affliction, stage);
+        await AfflictionChatService.postEffectIntervalTrigger(token, affliction);
+
+        const effectIntervalSeconds = AfflictionParser.durationToSeconds(stage.effectInterval);
+        const effectRounds = Math.ceil(effectIntervalSeconds / 6);
+        await AfflictionStore.updateAffliction(token, affliction.id, {
+          effectIntervalElapsed: 0,
+          nextEffectRound: combat.round + effectRounds
+        });
+      }
+    }
+  }
+
+  static async checkWorldTimeEffectInterval(token, affliction, deltaSeconds, AfflictionService) {
+    if (affliction.inOnset) return;
+    if (!affliction.currentStage || affliction.currentStage === 0) return;
+
+    const stage = affliction.stages[affliction.currentStage - 1];
+    if (!stage || !stage.effectInterval) return;
+
+    const effectIntervalSeconds = AfflictionParser.durationToSeconds(stage.effectInterval);
+    const newElapsed = (affliction.effectIntervalElapsed || 0) + deltaSeconds;
+
+    if (newElapsed >= effectIntervalSeconds) {
+      if (stage) {
+        await AfflictionService.applyStageEffects(token, affliction, stage);
+      }
+
+      await AfflictionChatService.postEffectIntervalTrigger(token, affliction);
+
+      const remainingElapsed = newElapsed % effectIntervalSeconds;
+      await AfflictionStore.updateAffliction(token, affliction.id, {
+        effectIntervalElapsed: remainingElapsed,
+        nextEffectTimestamp: game.time.worldTime + (effectIntervalSeconds - remainingElapsed)
+      });
+    } else {
+      await AfflictionStore.updateAffliction(token, affliction.id, {
+        effectIntervalElapsed: newElapsed
+      });
+    }
+  }
+
+  static async checkWorldTimeOnsetEffectInterval(token, affliction, deltaSeconds, AfflictionService) {
+    if (!affliction.inOnset) return;
+    if (!affliction.onsetEffectInterval) return;
+
+    const intervalSeconds = AfflictionParser.durationToSeconds(affliction.onsetEffectInterval);
+    const newElapsed = (affliction.onsetEffectIntervalElapsed || 0) + deltaSeconds;
+
+    if (newElapsed >= intervalSeconds) {
+      const syntheticOnsetStage = {
+        effects: '',
+        conditions: affliction.onsetConditions || [],
+        weakness: affliction.onsetWeakness || [],
+        damage: affliction.onsetDamage || [],
+        autoEffects: [],
+        ruleElements: []
+      };
+      await AfflictionService.applyStageEffects(token, affliction, syntheticOnsetStage);
+      await AfflictionChatService.postOnsetEffectIntervalTrigger(token, affliction);
+
+      const remainingElapsed = newElapsed % intervalSeconds;
+      await AfflictionStore.updateAffliction(token, affliction.id, {
+        onsetEffectIntervalElapsed: remainingElapsed,
+        nextOnsetEffectTimestamp: game.time.worldTime + (intervalSeconds - remainingElapsed)
+      });
+    } else {
+      await AfflictionStore.updateAffliction(token, affliction.id, {
+        onsetEffectIntervalElapsed: newElapsed
+      });
+    }
   }
 
   static async checkWorldTimeSave(token, affliction, deltaSeconds, AfflictionService) {

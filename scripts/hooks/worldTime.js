@@ -39,14 +39,22 @@ export async function onWorldTimeUpdate(worldTime, delta) {
             ? { value: durationCopy.value, unit: durationCopy.unit }
             : undefined;
 
-          await AfflictionStore.updateAffliction(token, id, {
+          const onsetUpdates = {
             inOnset: false,
             currentStage: targetStage,
             onsetRemaining: 0,
             durationElapsed: 0,
             nextSaveTimestamp: game.time.worldTime + stageDurationSeconds,
             ...(resolvedDuration && { currentStageResolvedDuration: resolvedDuration })
-          });
+          };
+
+          if (stageData.effectInterval) {
+            const effectIntervalSeconds = AfflictionParser.durationToSeconds(stageData.effectInterval);
+            onsetUpdates.effectIntervalElapsed = 0;
+            onsetUpdates.nextEffectTimestamp = game.time.worldTime + effectIntervalSeconds;
+          }
+
+          await AfflictionStore.updateAffliction(token, id, onsetUpdates);
 
           const updatedAffliction = AfflictionStore.getAffliction(token, id);
           await AfflictionService.applyStageEffects(token, updatedAffliction, stageData);
@@ -64,12 +72,14 @@ export async function onWorldTimeUpdate(worldTime, delta) {
           await AfflictionStore.updateAffliction(token, id, {
             onsetRemaining: newRemaining
           });
+          await AfflictionService.checkWorldTimeOnsetEffectInterval(token, affliction, delta);
         }
       } else {
         const wasRemoved = await AfflictionService.checkWorldTimeMaxDuration(token, affliction, delta);
         if (wasRemoved) continue;
 
         await AfflictionService.checkWorldTimeSave(token, affliction, delta);
+        await AfflictionService.checkWorldTimeEffectInterval(token, affliction, delta);
       }
     }
   }
