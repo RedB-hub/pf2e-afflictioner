@@ -1,8 +1,10 @@
 import { EN_PARSER_LOCALE } from './parser-locale-en.js';
+import { RU_PARSER_LOCALE } from './parser-locale-ru.js';
 import { ZH_PARSER_LOCALE } from './parser-locale-zh.js';
 
 const LOCALES = {
   'en': EN_PARSER_LOCALE,
+  'ru': RU_PARSER_LOCALE,
   'zh': ZH_PARSER_LOCALE,
   'cn': ZH_PARSER_LOCALE,  // module.json uses "cn" as the lang code for Simplified Chinese
 };
