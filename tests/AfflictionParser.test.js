@@ -409,6 +409,79 @@ describe('AfflictionParser — Chinese', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// UNTRANSLATED ITEM FALLBACK (English items in non-EN sessions)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('AfflictionParser — EN fallback for untranslated items', () => {
+  const enItem = {
+    name: 'Spear Frog Poison',
+    uuid: 'test-uuid-en-fallback',
+    system: {
+      traits: { value: ['poison'] },
+      level: { value: 2 },
+      description: {
+        value:
+          '<p><strong>Saving Throw</strong> @Check[fortitude|dc:15]</p>' +
+          '<p><strong>Onset</strong> 1 round</p>' +
+          '<p><strong>Maximum Duration</strong> 6 rounds</p>' +
+          '<p><strong>Stage 1</strong> @Damage[1d4[poison]] damage (1 round)</p>' +
+          '<p><strong>Stage 2</strong> @Damage[1d6[poison]] damage and @UUID[Compendium.pf2e.conditionitems.Item.MIRkyAjyBeXivMa7]{Enfeebled 1} (1 round)</p>',
+      },
+    },
+  };
+
+  test('parses English item in Russian session via parseFromItem', () => {
+    setLang('ru');
+    const result = AfflictionParser.parseFromItem(enItem);
+    expect(result.skip).toBeUndefined();
+    expect(result.type).toBe('poison');
+    expect(result.dc).toBe(15);
+    expect(result.onset).toEqual({ value: 1, unit: 'round', isDice: false });
+    expect(result.maxDuration).toEqual({ value: 6, unit: 'round', isDice: false });
+    expect(result.stages).toHaveLength(2);
+    expect(result.stages[0].damage).toEqual(
+      expect.arrayContaining([expect.objectContaining({ formula: '1d4', type: 'poison' })]),
+    );
+    expect(result.stages[1].conditions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'enfeebled', value: 1 })]),
+    );
+  });
+
+  test('parses English item in Chinese session via parseFromItem', () => {
+    setLang('zh');
+    const result = AfflictionParser.parseFromItem(enItem);
+    expect(result.skip).toBeUndefined();
+    expect(result.type).toBe('poison');
+    expect(result.dc).toBe(15);
+    expect(result.maxDuration).toEqual({ value: 6, unit: 'round', isDice: false });
+    expect(result.stages).toHaveLength(2);
+  });
+
+  test('still prefers native locale when available (RU)', () => {
+    setLang('ru');
+    const ruItem = {
+      name: 'Яд копьеносной лягушки',
+      uuid: 'test-uuid-ru-native',
+      system: {
+        traits: { value: ['poison'] },
+        level: { value: 2 },
+        description: {
+          value:
+            '<p><strong>Спасбросок:</strong> @Check[fortitude|dc:15]</p>' +
+            '<p><strong>Макс.продолжительность:</strong> 6 раундов</p>' +
+            '<p><strong>Стадия 1:</strong> @Damage[1d4[poison]] (1 раунд)</p>' +
+            '<p><strong>Стадия 2:</strong> @Damage[1d6[poison]] (1 раунд)</p>',
+        },
+      },
+    };
+    const result = AfflictionParser.parseFromItem(ruItem);
+    expect(result.skip).toBeUndefined();
+    expect(result.stages).toHaveLength(2);
+    expect(result.maxDuration).toEqual({ value: 6, unit: 'round', isDice: false });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // DEATH DETECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 

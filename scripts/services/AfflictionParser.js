@@ -1,5 +1,5 @@
 import { PF2E_CONDITIONS, DURATION_MULTIPLIERS } from '../constants.js';
-import { getParserLocale } from '../locales/parser-locales.js';
+import { getParserLocale, getEnParserLocale, withLocale } from '../locales/parser-locales.js';
 
 export class AfflictionParser {
   static parseFromItem(item) {
@@ -18,28 +18,37 @@ export class AfflictionParser {
 
     const description = item.system?.description?.value || '';
 
-    const stages = this.extractStages(description);
+    let stages = this.extractStages(description);
 
-    if (!stages || stages.length === 0) {
-      return {
-        skip: true
-      };
+    // Fallback: if the current locale found no stages and we're not already
+    // using English, retry with the EN locale (handles untranslated items in
+    // non-EN game sessions).
+    const needsEnFallback = (!stages || stages.length === 0) && getParserLocale().id !== 'en';
+    if (needsEnFallback) {
+      stages = withLocale(getEnParserLocale(), () => this.extractStages(description));
     }
 
-    const maxDuration = item.system?.maxDuration ? this.parseDuration(item.system.maxDuration) : this.extractMaxDuration(description);
+    if (!stages || stages.length === 0) {
+      return { skip: true };
+    }
 
-    return {
+    // If EN fallback matched, run remaining extractions under EN locale too.
+    const buildResult = () => ({
       name: item.name,
       type,
       dc: this.extractDC(description, item),
       onset: item.system?.onset ? this.parseDuration(item.system.onset) : this.extractOnset(description),
-      stages: stages,
-      maxDuration,
-      isVirulent: isVirulent,
+      stages,
+      maxDuration: item.system?.maxDuration ? this.parseDuration(item.system.maxDuration) : this.extractMaxDuration(description),
+      isVirulent,
       multipleExposure: this.extractMultipleExposure(description),
       sourceItemUuid: item.uuid,
-      level: item.system?.level?.value || 0
-    };
+      level: item.system?.level?.value || 0,
+    });
+
+    return needsEnFallback
+      ? withLocale(getEnParserLocale(), buildResult)
+      : buildResult();
   }
 
   static parseStructuredAffliction(item) {

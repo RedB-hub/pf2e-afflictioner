@@ -16,10 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Locale architecture**: Moved label regex construction from the parser into individual locale files (`stageLabelRe`, `onsetLabelRe`, `maxDurationLabelRe`, `afterLabel`, `afterLabelOpt`), so each locale controls its own punctuation conventions.
+- **English fallback for untranslated items**: When the current locale fails to parse stages from an item description, the parser automatically retries with the English locale. This allows untranslated items to work in non-EN game sessions without duplicating English patterns in every locale.
 
 ### Added
 
-- **Parser unit tests**: 53 tests covering stage extraction, DC, onset, max duration, conditions, damage, duration parsing, death detection, and stage references across all three locales (EN, RU, ZH).
+- **Parser unit tests**: 56 tests covering stage extraction, DC, onset, max duration, conditions, damage, duration parsing, death detection, stage references, and EN fallback across all three locales (EN, RU, ZH).
 
 ## [1.6.0] - 2026-03-06
 
