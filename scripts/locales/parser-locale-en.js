@@ -7,11 +7,14 @@ _conditionDisplayMap.set('flat-footed', 'off-guard');
 export const EN_PARSER_LOCALE = {
   id: 'en',
 
-  // ── Section header labels ──────────────────────────────────────────────────
-  // Used to build regexes that match "<strong>Stage 1</strong>" etc. in item HTML.
-  stageLabel:       'Stage',
-  onsetLabel:       'Onset',
-  maxDurationLabel: 'Maximum Duration',
+  // ── Section header regex fragments ─────────────────────────────────────────
+  // Pre-escaped for regex use.  stageLabelRe must capture the stage number in group 1.
+  stageLabelRe:       'Stage\\s*(\\d+)',
+  onsetLabelRe:       'Onset',
+  maxDurationLabelRe: 'Maximum\\s+Duration',
+  // Separator between </strong> (or label end) and content.
+  afterLabel:    '\\s+',   // required (inline/plain patterns)
+  afterLabelOpt: '\\s*',   // optional  (paragraph pattern)
 
   // ── Standalone patterns ────────────────────────────────────────────────────
   asStagePattern:      /\bas\s+stage\s+(\d+)\b/i,

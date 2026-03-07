@@ -56,10 +56,15 @@ const _conditionDisplayMap = new Map([
 export const RU_PARSER_LOCALE = {
   id: 'ru',
 
-  // ── Section header labels ──────────────────────────────────────────────────
-  stageLabel:       'Стадия',
-  onsetLabel:       'Возникновение',
-  maxDurationLabel: 'Макс.продолжительность',
+  // ── Section header regex fragments ─────────────────────────────────────────
+  // Pre-escaped for regex use.  stageLabelRe must capture the stage number in group 1.
+  // Russian convention uses a colon after labels — `:?` makes it optional.
+  stageLabelRe:       'Стадия\\s*(\\d+):?',
+  onsetLabelRe:       'Возникновение:?',
+  maxDurationLabelRe: 'Макс\\.продолжительность:?',
+  // Separator: colon and/or whitespace (colon may appear outside <strong> tag too).
+  afterLabel:    '[:\\s]+',
+  afterLabelOpt: '[:\\s]*',
 
   // ── Standalone patterns ────────────────────────────────────────────────────
   // "как стадия 2" / "as stage 2"
@@ -67,7 +72,8 @@ export const RU_PARSER_LOCALE = {
   // "КС 18" or "DC 18"
   dcPattern:          /(?:КС|DC)\s+(\d+)/i,
   // мёртв/мертв = dead, умирает = dies, смерть = death
-  deathPattern:       /\bмёртв\b|\bмертв\b|\bумирает\b|\bсмерть\b|\bdead\b|\bdies\b|\binstant\s+death\b/i,
+  // \b doesn't work with Cyrillic in JS — use (?:^|\\s) / (?:\\s|$) boundaries instead.
+  deathPattern:       /(?:^|\s)(?:мёртв|мертв|умирает|смерть)(?:\s|$)|\bdead\b|\bdies\b|\binstant\s+death\b/i,
   // "на 1 раунд" / "на 2d6 часов" at end of plain-text stage content
   forDurationPattern: /\bна\s+(\d+d\d+\s+\S+|\d+\s+\S+)\s*$/i,
   // "1d6 урон огнём или холодом"

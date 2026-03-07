@@ -52,10 +52,14 @@ const _conditionDisplayMap = new Map([
 export const ZH_PARSER_LOCALE = {
   id: 'zh',
 
-  // ── Section header labels ──────────────────────────────────────────────────
-  stageLabel:       '阶段',
-  onsetLabel:       '潜伏期',
-  maxDurationLabel: '最大持续时间',
+  // ── Section header regex fragments ─────────────────────────────────────────
+  // Pre-escaped for regex use.  stageLabelRe must capture the stage number in group 1.
+  stageLabelRe:       '阶段\\s*(\\d+)',
+  onsetLabelRe:       '潜伏期',
+  maxDurationLabelRe: '最大持续时间',
+  // Chinese may omit whitespace between label and content.
+  afterLabel:    '\\s*',
+  afterLabelOpt: '\\s*',
 
   // ── Standalone patterns ────────────────────────────────────────────────────
   // "如同阶段 2"

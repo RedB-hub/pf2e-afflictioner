@@ -156,12 +156,11 @@ export class AfflictionParser {
   }
 
   static extractOnset(description) {
-    const { onsetLabel } = getParserLocale();
-    const escaped = onsetLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const locale = getParserLocale();
 
-    let onsetMatch = description.match(new RegExp(`<strong>${escaped}<\\/strong>\\s+([^<]+)`, 'i'));
+    let onsetMatch = description.match(new RegExp(`<strong>${locale.onsetLabelRe}<\\/strong>${locale.afterLabel}([^<]+)`, 'i'));
     if (!onsetMatch) {
-      onsetMatch = description.match(new RegExp(`${escaped}\\s+([^;.<]+)`, 'i'));
+      onsetMatch = description.match(new RegExp(`${locale.onsetLabelRe}${locale.afterLabel}([^;.<]+)`, 'i'));
     }
     if (!onsetMatch) return null;
 
@@ -170,14 +169,12 @@ export class AfflictionParser {
 
   static extractStages(description) {
     const locale = getParserLocale();
-    const sl = locale.stageLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const stages = [];
     const matchedStageNums = new Set();
 
-    // \s* — space between label and number is optional (some CN translations omit it)
     // [（(] / [)）] — accept both ASCII and full-width parentheses (used in CN)
-    const htmlInlineRe = new RegExp(`<strong>${sl}\\s*(\\d+)<\\/strong>\\s+(.+?)[（(]([^)）]+)[)）]([^<]*)`, 'gi');
+    const htmlInlineRe = new RegExp(`<strong>${locale.stageLabelRe}<\\/strong>${locale.afterLabel}(.+?)[（(]([^)）]+)[)）]([^<]*)`, 'gi');
     for (const match of description.matchAll(htmlInlineRe)) {
       const stageNum = parseInt(match[1]);
       const effectsBefore = match[2].trim();
@@ -200,7 +197,7 @@ export class AfflictionParser {
       matchedStageNums.add(stageNum);
     }
 
-    const htmlParaRe = new RegExp(`<strong>${sl}\\s*(\\d+)<\\/strong>\\s*([\\s\\S]*?)<\\/p>`, 'gi');
+    const htmlParaRe = new RegExp(`<strong>${locale.stageLabelRe}<\\/strong>${locale.afterLabelOpt}([\\s\\S]*?)<\\/p>`, 'gi');
     for (const match of description.matchAll(htmlParaRe)) {
       const stageNum = parseInt(match[1]);
       if (matchedStageNums.has(stageNum)) continue;
@@ -241,7 +238,7 @@ export class AfflictionParser {
     stages.sort((a, b) => a.number - b.number);
 
     if (stages.length === 0) {
-      const plainRe = new RegExp(`${sl}\\s*(\\d+)\\s+(.+?)[（(]([^)）]+)[)）]([^]*)`, 'gi');
+      const plainRe = new RegExp(`${locale.stageLabelRe}${locale.afterLabel}(.+?)[（(]([^)）]+)[)）]([^]*)`, 'gi');
       for (const match of description.matchAll(plainRe)) {
         const stageNum = parseInt(match[1]);
         const effectsBefore = match[2].trim();
@@ -454,9 +451,8 @@ export class AfflictionParser {
   }
 
   static extractMaxDuration(description) {
-    const { maxDurationLabel } = getParserLocale();
-    const escaped = maxDurationLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const maxMatch = description.match(new RegExp(`${escaped}(?:<\\/[^>]+>)?\\s+([^;.<]+)`, 'i'));
+    const locale = getParserLocale();
+    const maxMatch = description.match(new RegExp(`${locale.maxDurationLabelRe}(?:<\\/[^>]+>)?${locale.afterLabel}([^;.<]+)`, 'i'));
     if (maxMatch) return this.parseDuration(maxMatch[1].trim());
     return null;
   }

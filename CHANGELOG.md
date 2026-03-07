@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-03-07
+
+### Fixed
+
+- **Russian parser**: Fixed stage, onset, and max duration parsing failing on Russian-translated items that use colons after labels (e.g. `Стадия 1:`, `Макс.продолжительность:`).
+- **Russian death detection**: Fixed `\b` word boundaries not working with Cyrillic text in JavaScript, causing death-stage detection to silently fail for Russian keywords.
+- **Russian AFFLICTION_SKIPPED message**: Improved wording to "В описании не указаны КС или Стадии, добавление не удалось".
+
+### Changed
+
+- **Locale architecture**: Moved label regex construction from the parser into individual locale files (`stageLabelRe`, `onsetLabelRe`, `maxDurationLabelRe`, `afterLabel`, `afterLabelOpt`), so each locale controls its own punctuation conventions.
+
+### Added
+
+- **Parser unit tests**: 53 tests covering stage extraction, DC, onset, max duration, conditions, damage, duration parsing, death detection, and stage references across all three locales (EN, RU, ZH).
+
 ## [1.6.0] - 2026-03-06
 
 ### Added
