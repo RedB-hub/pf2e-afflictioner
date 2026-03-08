@@ -155,7 +155,7 @@ async function addApplyAfflictionButton(message, htmlElement) {
   if (!item) return;
 
   const afflictionData = AfflictionParser.parseFromItem(item);
-  if (!afflictionData) return;
+  if (!afflictionData || shouldSkipAffliction(afflictionData)) return;
 
   // Always prefer the DC from the note — it's computed at roll time with elite/weak adjustments applied
   const noteDcMatch = afflictionNote.text?.match(/data-pf2-dc="(\d+)"/i);
