@@ -267,7 +267,13 @@
       "FAST_RECOVERY_STAGE_CHANGE": "Fast Recovery: {tokenName}'s save reduced {afflictionName} by {stages} stage(s).",
       "FAST_RECOVERY_BUTTON_TOOLTIP": "Fast Recovery: stage will decrease by {stages} step(s)",
       "PERNICIOUS_POISON_APPLIED": "Pernicious Poison: {targetName} takes {damage} poison damage from {afflictionName}",
-      "PERNICIOUS_POISON_BUTTON_TOOLTIP": "Pernicious Poison: target takes poison damage equal to poison level on success"
+      "PERNICIOUS_POISON_BUTTON_TOOLTIP": "Pernicious Poison: target takes poison damage equal to poison level on success",
+      "STICKY_POISON_TITLE": "Sticky Poison",
+      "STICKY_POISON_DC5_DESC": "{actorName}'s {poisonName} on {weaponName} would be expended without a save. Attempting DC 5 flat check.",
+      "STICKY_POISON_DC17_DESC": "{actorName} hit with {weaponName} coated in {poisonName}. Attempting DC 17 flat check to retain the poison.",
+      "STICKY_POISON_SUCCESS": "The poison remains on the weapon!",
+      "STICKY_POISON_FAILURE": "The poison is expended.",
+      "STICKY_POISON_RETAINED_UNTIL_END": "{poisonName} on {weaponName} will persist until the end of {actorName}'s next turn."
     },
     "DEGREES": {
       "CRITICAL_SUCCESS": "Critical Success",

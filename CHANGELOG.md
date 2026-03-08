@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-03-08
+
+### Added
+
+- **Sticky Poison feat**: Automated support for the Sticky Poison alchemist feat. On critical failure or wrong damage type (poison expended without a save), a DC 5 flat check is rolled to retain the poison. On a successful hit, a DC 17 flat check is rolled; on success, the weapon stays poisoned until the end of the attacker's next turn.
+
+### Fixed
+
+- **Field Vial damage type**: Field Vial bonus damage now uses a properly typed `@Damage` enricher link (e.g. `@Damage[1d6[poison]]`) instead of a plain untyped roll, matching how all other damage in the module is displayed.
+
 ## [1.6.1] - 2026-03-07
 
 ### Fixed

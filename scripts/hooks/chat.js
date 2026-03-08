@@ -125,6 +125,23 @@ export async function onCreateChatMessage(message, options, userId) {
   }));
 }
 
+async function rollStickyPoisonFlatCheck(actor, weapon, coating, dc, gmWhisper) {
+  const roll = new Roll('1d20');
+  await roll.evaluate();
+  const success = roll.total >= dc;
+  const i = game.i18n;
+  const FK = 'PF2E_AFFLICTIONER.FEATS';
+  const descKey = dc === 5 ? 'STICKY_POISON_DC5_DESC' : 'STICKY_POISON_DC17_DESC';
+
+  await roll.toMessage({
+    flavor: `<div class="pf2e-afflictioner-save-request"><h3><i class="fas fa-flask"></i> ${i.localize(`${FK}.STICKY_POISON_TITLE`)}</h3><p>${i.format(`${FK}.${descKey}`, { actorName: actor.name, weaponName: weapon.name, poisonName: coating.poisonName })}</p><p><strong>${success ? i.localize(`${FK}.STICKY_POISON_SUCCESS`) : i.localize(`${FK}.STICKY_POISON_FAILURE`)}</strong></p></div>`,
+    speaker: ChatMessage.getSpeaker({ actor }),
+    whisper: gmWhisper
+  });
+
+  return success;
+}
+
 async function handleAttackRoll(_message, flags) {
   const originUuid = flags.origin?.uuid;
   if (!originUuid) return;
@@ -160,10 +177,12 @@ async function handleAttackRoll(_message, flags) {
       const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
       const { damageFormula, damageType: dmgType } = coating.afflictionData;
 
-      const roll = new Roll(damageFormula);
-      await roll.evaluate();
-      await roll.toMessage({
-        flavor: `<div class="pf2e-afflictioner-save-request"><h3><i class="fas fa-flask"></i> ${i.format(`${K}.FIELD_VIAL_HIT_TITLE`, { poisonName })}</h3><p>${i.format(`${K}.FIELD_VIAL_HIT_DESC`, { actorName, weaponName, damageType: dmgType })}</p></div>`,
+      const damageLink = dmgType && dmgType !== 'untyped'
+        ? `@Damage[${damageFormula}[${dmgType}]]`
+        : `@Damage[${damageFormula}]`;
+
+      await ChatMessage.create({
+        content: `<div class="pf2e-afflictioner-save-request"><h3><i class="fas fa-flask"></i> ${i.format(`${K}.FIELD_VIAL_HIT_TITLE`, { poisonName })}</h3><p>${i.format(`${K}.FIELD_VIAL_HIT_DESC`, { actorName, weaponName, damageType: dmgType })}</p><p><strong>${i.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLink}</p></div>`,
         speaker: ChatMessage.getSpeaker({ actor }),
         whisper: gmWhisper
       });
@@ -191,6 +210,12 @@ async function handleAttackRoll(_message, flags) {
       // Pernicious Poison: mark affliction so success still deals flat poison damage
       if (FeatsService.hasPerniciousPoison(actor) && coating.afflictionData.level > 0) {
         buttonAfflictionData = { ...buttonAfflictionData, perniciousPoisonLevel: coating.afflictionData.level };
+      }
+
+      // Sticky Poison: DC 17 flat check to retain poison on successful hit
+      let stickyPoisonSuccess = false;
+      if (FeatsService.hasStickyPoison(actor)) {
+        stickyPoisonSuccess = await rollStickyPoisonFlatCheck(actor, weapon, coating, 17, gmWhisper);
       }
 
       const i = game.i18n;
@@ -224,7 +249,8 @@ async function handleAttackRoll(_message, flags) {
                         data-target-token-id="${target.id}"
                         data-actor-id="${actor.id}"
                         data-weapon-id="${weapon.id}"
-                        data-affliction-data="${encodeURIComponent(JSON.stringify(buttonAfflictionData))}">
+                        data-affliction-data="${encodeURIComponent(JSON.stringify(buttonAfflictionData))}"
+                        data-sticky-poison-success="${stickyPoisonSuccess}">
                   <i class="fas fa-biohazard"></i> ${i.format(`${K}.HIT_APPLY_BTN`, { targetName: target.name })}
                 </button>
               </div>`,
@@ -243,13 +269,20 @@ async function handleAttackRoll(_message, flags) {
         });
       }
     } else {
-      await WeaponCoatingStore.removeCoating(actor, weapon.id);
-      const i = game.i18n;
-      const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
-      await ChatMessage.create({
-        content: `<div class="pf2e-afflictioner-save-request"><p>${i.format(`${K}.HIT_WRONG_DAMAGE`, { weaponName, poisonName })}</p></div>`,
-        whisper: gmWhisper
-      });
+      let removed = true;
+      if (FeatsService.hasStickyPoison(actor)) {
+        const kept = await rollStickyPoisonFlatCheck(actor, weapon, coating, 5, gmWhisper);
+        if (kept) removed = false;
+      }
+      if (removed) {
+        await WeaponCoatingStore.removeCoating(actor, weapon.id);
+        const i = game.i18n;
+        const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
+        await ChatMessage.create({
+          content: `<div class="pf2e-afflictioner-save-request"><p>${i.format(`${K}.HIT_WRONG_DAMAGE`, { weaponName, poisonName })}</p></div>`,
+          whisper: gmWhisper
+        });
+      }
     }
   } else if (outcome === DEGREE_OF_SUCCESS.FAILURE) {
     const i = game.i18n;
@@ -259,12 +292,19 @@ async function handleAttackRoll(_message, flags) {
       whisper: gmWhisper
     });
   } else if (outcome === DEGREE_OF_SUCCESS.CRITICAL_FAILURE) {
-    await WeaponCoatingStore.removeCoating(actor, weapon.id);
-    const i = game.i18n;
-    const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
-    await ChatMessage.create({
-      content: `<div class="pf2e-afflictioner-save-request"><p>${i.format(`${K}.CRIT_MISS`, { actorName, weaponName, poisonName })}</p></div>`,
-      whisper: gmWhisper
-    });
+    let removed = true;
+    if (FeatsService.hasStickyPoison(actor)) {
+      const kept = await rollStickyPoisonFlatCheck(actor, weapon, coating, 5, gmWhisper);
+      if (kept) removed = false;
+    }
+    if (removed) {
+      await WeaponCoatingStore.removeCoating(actor, weapon.id);
+      const i = game.i18n;
+      const K = 'PF2E_AFFLICTIONER.WEAPON_COATING';
+      await ChatMessage.create({
+        content: `<div class="pf2e-afflictioner-save-request"><p>${i.format(`${K}.CRIT_MISS`, { actorName, weaponName, poisonName })}</p></div>`,
+        whisper: gmWhisper
+      });
+    }
   }
 }

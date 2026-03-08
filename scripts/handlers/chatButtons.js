@@ -45,8 +45,18 @@ function registerApplyWeaponPoisonHandler(root) {
     if (actorId && weaponId) {
       const actor = game.actors.get(actorId);
       if (actor) {
-        const { removeCoating } = await import('../stores/WeaponCoatingStore.js');
-        await removeCoating(actor, weaponId);
+        const stickyPoisonSuccess = btn.dataset.stickyPoisonSuccess === 'true';
+        if (stickyPoisonSuccess) {
+          const { updateCoating } = await import('../stores/WeaponCoatingStore.js');
+          const combat = game.combat;
+          await updateCoating(actor, weaponId, {
+            expirationMode: 'end-next-turn',
+            appliedRound: combat?.started ? combat.round : null
+          });
+        } else {
+          const { removeCoating } = await import('../stores/WeaponCoatingStore.js');
+          await removeCoating(actor, weaponId);
+        }
         const { AfflictionManager } = await import('../managers/AfflictionManager.js');
         if (AfflictionManager.currentInstance) AfflictionManager.currentInstance.render({ force: true });
       }
