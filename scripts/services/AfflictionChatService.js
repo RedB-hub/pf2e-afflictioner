@@ -1,6 +1,11 @@
 import { MODULE_ID } from '../constants.js';
 
 export class AfflictionChatService {
+  static _capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   static async promptInitialSave(token, affliction, afflictionData, afflictionId) {
     const actor = token.actor;
     const showDCToPlayers = game.pf2e?.settings?.metagame?.dcs ?? true;
@@ -14,7 +19,7 @@ export class AfflictionChatService {
         <div class="pf2e-afflictioner-save-request" style="border-color: #8b0000; padding: 12px;">
           <h3><i class="fas fa-user-secret"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.GM_SECRET_SAVE_TITLE', { afflictionName: afflictionData.name })}</h3>
           <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.HAS_BEEN_EXPOSED_TO')} <strong>${afflictionData.name}</strong></p>
-          <p><strong>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_SAVE_DC', { dc: afflictionData.dc })}</strong></p>
+          <p><strong>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.SAVE_DC', { dc: afflictionData.dc, saveType: this._capitalize(afflictionData.saveType || 'fortitude') })}</strong></p>
           <p><em style="color: #752f00;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_MYSTERIOUS_REASON')}</em></p>
           <p><em style="font-size: 0.9em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_PREFIX')} ${afflictionData.onset ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_ONSET') : game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_NO_EFFECTS')}</em></p>
           <hr>
@@ -199,18 +204,19 @@ export class AfflictionChatService {
   }
 
   static _buildInitialSaveMessage(actor, token, afflictionData, afflictionId, showDCToPlayers, anonymizeSaves) {
+    const saveTypeLabel = this._capitalize(afflictionData.saveType || 'fortitude');
     if (anonymizeSaves) {
       return `
         <div class="pf2e-afflictioner-save-request">
-          <h3><i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.FORTITUDE_SAVE_REQUIRED')}</h3>
-          <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.NEEDS_FORTITUDE_SAVE')}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
+          <h3><i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_SAVE_REQUIRED', { saveType: saveTypeLabel })}</h3>
+          <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.NEEDS_FORTITUDE_SAVE', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
           <hr>
           <button class="affliction-roll-initial-save"
                   data-token-id="${token.id}"
                   data-affliction-id="${afflictionId}"
                   data-dc="${afflictionData.dc}"
                   style="width: 100%; padding: 8px; margin-top: 10px;">
-            <i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE')}
+            <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
           </button>
         </div>
       `;
@@ -220,30 +226,31 @@ export class AfflictionChatService {
       <div class="pf2e-afflictioner-save-request">
         <h3><i class="fas fa-biohazard"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.INITIAL_SAVE_HEADING', { afflictionName: afflictionData.name })}</h3>
         <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.HAS_BEEN_EXPOSED_TO')} <strong>${afflictionData.name}</strong></p>
-        <p>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.MAKE_FORTITUDE_RESIST')}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
+        <p>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAKE_FORTITUDE_RESIST', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
         <hr>
         <button class="affliction-roll-initial-save"
                 data-token-id="${token.id}"
                 data-affliction-id="${afflictionId}"
                 data-dc="${afflictionData.dc}"
                 style="width: 100%; padding: 8px; margin-top: 10px;">
-          <i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE')}
+          <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
         </button>
       </div>
     `;
   }
 
   static _buildStageSaveMessage(actor, token, affliction, showDCToPlayers, anonymizeSaves) {
+    const saveTypeLabel = this._capitalize(affliction.saveType || 'fortitude');
     if (anonymizeSaves) {
       return `
         <div class="pf2e-afflictioner-save-request">
-          <h3><i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.FORTITUDE_SAVE_REQUIRED')}</h3>
-          <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.MUST_MAKE_FORTITUDE')}</p>
+          <h3><i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_SAVE_REQUIRED', { saveType: saveTypeLabel })}</h3>
+          <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MUST_MAKE_FORTITUDE', { saveType: saveTypeLabel })}</p>
           ${showDCToPlayers ? `<p><strong>DC:</strong> ${affliction.dc}</p>` : ''}
           ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
           <hr>
           <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
-            <i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE')}
+            <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
           </button>
         </div>
       `;
@@ -252,14 +259,14 @@ export class AfflictionChatService {
     return `
       <div class="pf2e-afflictioner-save-request">
         <h3><i class="fas fa-biohazard"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.SAVE_REQUIRED_HEADING', { afflictionName: affliction.name })}${affliction.isVirulent ? ` <span style="color: #c45500; font-size: 0.75em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.VIRULENT_PARENS')}</span>` : ''}</h3>
-        <p><strong>${actor.name}</strong> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.MUST_MAKE_FORTITUDE')}</p>
+        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MUST_MAKE_FORTITUDE', { saveType: saveTypeLabel })}</p>
         ${showDCToPlayers ? `<p><strong>DC:</strong> ${affliction.dc}</p>` : ''}
         <p>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CURRENT_STAGE_LABEL')} ${affliction.currentStage}</p>
         ${affliction.isVirulent ? `<p><em style="color: #c45500; font-size: 0.75em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.VIRULENT_NOTE')}</em></p>` : ''}
         ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
         <hr>
         <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
-          <i class="fas fa-dice-d20"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE')}
+          <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
         </button>
       </div>
     `;

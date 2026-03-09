@@ -37,6 +37,7 @@ export class AfflictionParser {
       name: item.name,
       type,
       dc: this.extractDC(description, item),
+      saveType: this.extractSaveType(description, item),
       onset: item.system?.onset ? this.parseDuration(item.system.onset) : this.extractOnset(description),
       stages,
       maxDuration: item.system?.maxDuration ? this.parseDuration(item.system.maxDuration) : this.extractMaxDuration(description),
@@ -101,6 +102,7 @@ export class AfflictionParser {
       name: item.name,
       type: afflictionType,
       dc,
+      saveType: this.extractSaveType(description, item),
       onset: item.system?.onset ? this.parseDuration(item.system.onset) : null,
       stages: stages,
       maxDuration: item.system?.maxDuration ? this.parseDuration(item.system.maxDuration) : this.extractMaxDuration(description),
@@ -162,6 +164,30 @@ export class AfflictionParser {
 
     console.warn(`PF2e Afflictioner | No DC found for affliction item "${item.name}" (${item.uuid}).`);
     return null;
+  }
+
+  static extractSaveType(description, item) {
+    // Structured data: item.system.save.statistic (PF2e system field)
+    const statistic = item.system?.save?.statistic;
+    if (statistic && ['fortitude', 'reflex', 'will'].includes(statistic)) {
+      return statistic;
+    }
+
+    // @Check enricher: @Check[type:fortitude|dc:18]
+    const checkMatch = description.match(/@Check\[[^\]]*type:(\w+)/i);
+    if (checkMatch) {
+      const type = checkMatch[1].toLowerCase();
+      if (['fortitude', 'reflex', 'will'].includes(type)) return type;
+    }
+
+    // data-pf2-check attribute: data-pf2-check="will"
+    const attrMatch = description.match(/data-pf2-check="(\w+)"/i);
+    if (attrMatch) {
+      const type = attrMatch[1].toLowerCase();
+      if (['fortitude', 'reflex', 'will'].includes(type)) return type;
+    }
+
+    return 'fortitude';
   }
 
   static extractOnset(description) {

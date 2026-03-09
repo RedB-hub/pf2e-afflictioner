@@ -61,7 +61,8 @@ function registerInitialSaveButtons(root) {
         rollOptions.rollMode = CONST.DICE_ROLL_MODES.BLIND;
       }
 
-      await actor.saves.fortitude.roll(rollOptions);
+      const saveKey = affliction.saveType || 'fortitude';
+      await actor.saves[saveKey].roll(rollOptions);
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -162,7 +163,8 @@ function registerStageSaveButtons(root) {
         stageRollOptions.rollMode = CONST.DICE_ROLL_MODES.BLIND;
       }
 
-      await actor.saves.fortitude.roll(stageRollOptions);
+      const saveKey = affliction.saveType || 'fortitude';
+      await actor.saves[saveKey].roll(stageRollOptions);
 
       await new Promise(resolve => setTimeout(resolve, 100));
 

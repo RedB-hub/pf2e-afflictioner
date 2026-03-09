@@ -44,7 +44,7 @@ export class StoryframeIntegrationService {
       id: requestId,
       actorUuid: actor.uuid,
       userId: user.id,
-      skillSlug: 'fortitude',
+      skillSlug: affliction.saveType || 'fortitude',
       checkType: 'save',
       dc,
       isSecretRoll: false,
