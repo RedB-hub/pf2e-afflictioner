@@ -173,8 +173,8 @@ export class AfflictionParser {
       return statistic;
     }
 
-    // @Check enricher: @Check[type:fortitude|dc:18]
-    const checkMatch = description.match(/@Check\[[^\]]*type:(\w+)/i);
+    // @Check enricher: @Check[type:fortitude|dc:18] or @Check[fortitude|dc:18]
+    const checkMatch = description.match(/@Check\[(?:type:)?(\w+)/i);
     if (checkMatch) {
       const type = checkMatch[1].toLowerCase();
       if (['fortitude', 'reflex', 'will'].includes(type)) return type;

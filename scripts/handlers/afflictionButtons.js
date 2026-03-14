@@ -157,10 +157,18 @@ async function addApplyAfflictionButton(message, htmlElement) {
   const afflictionData = AfflictionParser.parseFromItem(item);
   if (!afflictionData || shouldSkipAffliction(afflictionData)) return;
 
-  // Always prefer the DC from the note — it's computed at roll time with elite/weak adjustments applied
+  // Always prefer DC and save type from the note — they're computed at roll time with elite/weak adjustments applied
   const noteDcMatch = afflictionNote.text?.match(/data-pf2-dc="(\d+)"/i);
   if (noteDcMatch) {
     afflictionData.dc = parseInt(noteDcMatch[1]);
+  }
+
+  const noteSaveMatch = afflictionNote.text?.match(/data-pf2-check="(\w+)"/i);
+  if (noteSaveMatch) {
+    const noteType = noteSaveMatch[1].toLowerCase();
+    if (['fortitude', 'reflex', 'will'].includes(noteType)) {
+      afflictionData.saveType = noteType;
+    }
   }
 
   // Blowgun Poisoner: degrade the target's initial save if the attacker critically hit with a blowgun
