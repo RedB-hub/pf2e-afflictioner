@@ -32,9 +32,13 @@ export class AfflictionParser {
       return { skip: true };
     }
 
+    // If the item is a spell containing an embedded affliction (e.g. Spider Sting → Spider Venom),
+    // try to extract the actual affliction name from the description.
+    const afflictionName = this.extractEmbeddedAfflictionName(description, type) || item.name;
+
     // If EN fallback matched, run remaining extractions under EN locale too.
     const buildResult = () => ({
-      name: item.name,
+      name: afflictionName,
       type,
       dc: this.extractDC(description, item),
       saveType: this.extractSaveType(description, item),
@@ -171,6 +175,12 @@ export class AfflictionParser {
     const statistic = item.system?.save?.statistic;
     if (statistic && ['fortitude', 'reflex', 'will'].includes(statistic)) {
       return statistic;
+    }
+
+    // PF2e spells store save info under item.system.defense.save
+    const defenseStatistic = item.system?.defense?.save?.statistic;
+    if (defenseStatistic && ['fortitude', 'reflex', 'will'].includes(defenseStatistic)) {
+      return defenseStatistic;
     }
 
     // @Check enricher: @Check[type:fortitude|dc:18] or @Check[fortitude|dc:18]
@@ -553,6 +563,19 @@ export class AfflictionParser {
     if (hours > 0) return `${hours}h`;
     if (minutes > 0) return `${minutes}m`;
     return `${seconds}s`;
+  }
+
+  /**
+   * For spells that contain an embedded affliction (e.g. "Spider Sting" spell embeds "Spider Venom"),
+   * extract the actual affliction name from the description.
+   * Looks for patterns like: <strong>Spider Venom</strong> (poison)
+   */
+  static extractEmbeddedAfflictionName(description, type) {
+    if (!description || !type) return null;
+    const typePattern = type === 'poison' ? 'poison' : type === 'disease' ? 'disease' : type === 'curse' ? 'curse' : 'poison|disease|curse';
+    const match = description.match(new RegExp(`<strong>([^<]+)<\\/strong>\\s*\\(${typePattern}\\)`, 'i'));
+    if (match) return match[1].trim();
+    return null;
   }
 
   static extractMultipleExposure(description) {

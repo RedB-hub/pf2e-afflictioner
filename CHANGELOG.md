@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2026-03-17
+
+### Fixed
+
+- **Apply Affliction button missing for spell item activations**: Spell-cast messages (e.g. Spider Sting) that lack `casting.embeddedSpell` or `context` flags now correctly show the Apply Affliction button. Added a fallback that parses affliction data directly from the rendered message content and origin rollOptions when the item can't be resolved via `fromUuid`.
+- **Save type not extracted from spell defense data**: `extractSaveType` now checks `item.system.defense.save.statistic` where PF2e spells store their save type, fixing incorrect Fortitude defaults for Will/Reflex spell saves.
+- **Affliction name uses spell name instead of embedded affliction name**: Spells containing an embedded affliction (e.g. Spider Sting containing Spider Venom) now correctly display the affliction name by extracting it from the description pattern `<strong>Name</strong> (poison/disease/curse)`.
+
 ## [1.6.5] - 2026-03-14
 
 ### Fixed

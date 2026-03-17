@@ -241,11 +241,29 @@ async function addApplyAfflictionToSelectedButton(message, htmlElement) {
     return;
   }
 
+  if (message.flags?.pf2e?.context?.target?.token) {
+    return;
+  }
+
   let item;
   try {
     item = await fromUuid(itemUuid);
   } catch (error) {
-    return;
+    // ignore — will try fallbacks below
+  }
+
+  // Fallback to embedded spell data from casting flags (e.g. consumed scrolls/wands)
+  if (!item) {
+    const embedded = message.flags?.pf2e?.casting?.embeddedSpell;
+    if (embedded?.system) {
+      item = embedded;
+    }
+  }
+
+  // Fallback: build synthetic item from message content and origin rollOptions
+  // Handles item activations where the item can't be resolved and no embedded spell exists
+  if (!item) {
+    item = buildSyntheticItemFromMessage(message);
   }
 
   if (!item) return;
@@ -255,18 +273,35 @@ async function addApplyAfflictionToSelectedButton(message, htmlElement) {
     return;
   }
 
-  if (message.flags?.pf2e?.context?.target?.token) {
-    return;
+  let afflictionData = AfflictionParser.parseFromItem(item);
+
+  // If item-based parsing failed, try parsing from message content directly
+  if ((!afflictionData || shouldSkipAffliction(afflictionData)) && message.content) {
+    const contentItem = buildSyntheticItemFromMessage(message);
+    if (contentItem) {
+      afflictionData = AfflictionParser.parseFromItem(contentItem);
+    }
   }
 
-  const afflictionData = AfflictionParser.parseFromItem(item);
   if (!afflictionData || shouldSkipAffliction(afflictionData)) {
     return;
   }
 
+  // Extract DC from message content save button (spell DCs are computed at cast time)
   if (!afflictionData.dc) {
     const dcMatch = message.content?.match(/data-dc="(\d+)"/);
     if (dcMatch) afflictionData.dc = parseInt(dcMatch[1]);
+  }
+
+  // Extract save type from message content save button if not already set from item data
+  if (afflictionData.saveType === 'fortitude') {
+    const saveMatch = message.content?.match(/data-save="(\w+)"/);
+    if (saveMatch) {
+      const msgSaveType = saveMatch[1].toLowerCase();
+      if (['fortitude', 'reflex', 'will'].includes(msgSaveType)) {
+        afflictionData.saveType = msgSaveType;
+      }
+    }
   }
 
   htmlElement.dataset.applyAfflictionToSelectedEnabled = 'true';
@@ -357,4 +392,37 @@ async function addAfflictionDragSupport(message, htmlElement) {
 
   htmlElement.addEventListener('dragstart', onDragStart);
   htmlElement.addEventListener('dragend', onDragEnd);
+}
+
+/**
+ * Build a synthetic item-like object from message content and origin rollOptions.
+ * Used as a fallback when the actual item can't be resolved (consumed scrolls/wands,
+ * item activations without embedded spell data).
+ */
+function buildSyntheticItemFromMessage(message) {
+  const content = message.content;
+  if (!content) return null;
+
+  const rollOptions = message.flags?.pf2e?.origin?.rollOptions || [];
+  const traits = rollOptions
+    .filter(o => o.startsWith('origin:item:trait:'))
+    .map(o => o.replace('origin:item:trait:', ''));
+
+  if (!traits.includes('poison') && !traits.includes('disease') && !traits.includes('curse')) {
+    return null;
+  }
+
+  // Extract name from the card header: <h3>Spider Sting <span ...>2</span></h3>
+  const nameMatch = content.match(/<h3>([^<]+?)(?:\s*<span[^>]*>[^<]*<\/span>)?\s*<\/h3>/);
+
+  return {
+    name: nameMatch ? nameMatch[1].trim() : 'Unknown',
+    uuid: message.flags?.pf2e?.origin?.uuid,
+    system: {
+      traits: { value: traits },
+      description: { value: content },
+      level: { value: 0 },
+      defense: { save: {} }
+    }
+  };
 }
