@@ -137,7 +137,8 @@ export class CounteractService {
     let skillDisplay = skillNames[skill];
     if (!skillDisplay && skill.startsWith('spellcasting:')) {
       const matchedEntry = detectedEntries.find(e => e.id === skill.split(':')[1]);
-      skillDisplay = matchedEntry?.name || `${matchedEntry?.tradition?.charAt(0).toUpperCase()}${matchedEntry?.tradition?.slice(1) || ''} Spellcasting`;
+      const tradition = matchedEntry?.tradition || skill.split(':')[1] || '';
+      skillDisplay = matchedEntry?.name || (tradition ? `${tradition.charAt(0).toUpperCase()}${tradition.slice(1)} Spellcasting` : 'Spellcasting');
     }
     skillDisplay = skillDisplay || skill.charAt(0).toUpperCase() + skill.slice(1);
 

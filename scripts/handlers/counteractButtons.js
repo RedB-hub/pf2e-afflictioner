@@ -133,6 +133,7 @@ export function registerCounteractButtonHandlers(root) {
             'pf2e-afflictioner': {
               needsCounteractConfirmation: true,
               tokenId,
+              actorId,
               afflictionId,
               counteractRank,
               afflictionRank,
@@ -152,7 +153,7 @@ export async function injectCounteractConfirmButton(message, root) {
   if (!message.flags?.['pf2e-afflictioner']?.needsCounteractConfirmation) return;
 
   const flags = message.flags['pf2e-afflictioner'];
-  const { tokenId, afflictionId, counteractRank, afflictionRank, dc } = flags;
+  const { tokenId, actorId, afflictionId, counteractRank, afflictionRank, dc } = flags;
 
   const roll = message.rolls?.[0];
   if (!roll) return;
@@ -205,7 +206,8 @@ export async function injectCounteractConfirmButton(message, root) {
   applyBtn.className = 'pf2e-afflictioner-btn affliction-apply-counteract';
   applyBtn.style.cssText = `width:100%; background:${color}; border:none; color:white; padding:6px; border-radius:4px; cursor:pointer;`;
   applyBtn.textContent = game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLY_COUNTERACT');
-  applyBtn.dataset.tokenId = tokenId;
+  applyBtn.dataset.tokenId = tokenId || '';
+  if (actorId) applyBtn.dataset.actorId = actorId;
   applyBtn.dataset.afflictionId = afflictionId;
   applyBtn.dataset.counteractRank = counteractRank;
   applyBtn.dataset.afflictionRank = afflictionRank;
