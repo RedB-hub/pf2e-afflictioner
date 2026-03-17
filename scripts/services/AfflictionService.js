@@ -9,9 +9,10 @@ import { AfflictionTimerService } from './AfflictionTimerService.js';
 import { FeatsService } from './FeatsService.js';
 
 export class AfflictionService {
-  static async promptInitialSave(token, afflictionData) {
-    const actor = token.actor;
+  static async promptInitialSave(token, afflictionData, actor = null) {
+    actor = actor || token?.actor;
     if (!actor) return;
+    const entityName = token?.name || actor?.name || 'Unknown';
 
     const key = AfflictionDefinitionStore.generateDefinitionKey(afflictionData);
     const editedDef = AfflictionDefinitionStore.getEditedDefinition(key);
@@ -20,18 +21,20 @@ export class AfflictionService {
       afflictionData = AfflictionEditorService.applyEditedDefinition(afflictionData, editedDef);
     }
 
-    const existingAffliction = this.findExistingAffliction(token, afflictionData.name);
+    const existingAffliction = token
+      ? this.findExistingAffliction(token, afflictionData.name)
+      : this.findExistingAfflictionForActor(actor, afflictionData.name);
 
     if (existingAffliction) {
       if (afflictionData.multipleExposure?.enabled) {
-        await this.handleMultipleExposure(token, existingAffliction, afflictionData);
+        await this.handleMultipleExposure(token, existingAffliction, afflictionData, actor);
         return;
       } else if (afflictionData.type === 'poison') {
         afflictionData._isReExposure = true;
         afflictionData._existingAfflictionId = existingAffliction.id;
       } else {
         ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MULTIPLE_EXPOSURE_NO_EFFECT_DEFAULT', {
-          tokenName: token.name,
+          tokenName: entityName,
           afflictionName: afflictionData.name,
           type: afflictionData.type
         }));
@@ -70,15 +73,20 @@ export class AfflictionService {
       combatId: combat?.id
     };
 
-    await AfflictionStore.addAffliction(token, affliction);
-
-    const { VisualService } = await import('./VisualService.js');
-    await VisualService.addAfflictionIndicator(token);
+    if (token) {
+      await AfflictionStore.addAffliction(token, affliction);
+      const { VisualService } = await import('./VisualService.js');
+      await VisualService.addAfflictionIndicator(token);
+    } else if (actor) {
+      await AfflictionStore.addAfflictionForActor(actor, affliction);
+    }
 
     await AfflictionChatService.promptInitialSave(token, affliction, afflictionData, afflictionId);
   }
 
-  static async handleInitialSave(token, affliction, saveTotal, dc, dieValue = null) {
+  static async handleInitialSave(token, affliction, saveTotal, dc, dieValue = null, actor = null) {
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     let degree = this.calculateDegreeOfSuccess(saveTotal, dc, dieValue);
 
     if (affliction.blowgunPoisonerCrit) {
@@ -86,7 +94,7 @@ export class AfflictionService {
       if (degraded !== degree) {
         degree = degraded;
         ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.FEATS.BLOWGUN_POISONER_APPLIED', {
-          targetName: token.name,
+          targetName: entityName,
           afflictionName: affliction.name
         }));
       }
@@ -97,28 +105,30 @@ export class AfflictionService {
 
     if (degree === DEGREE_OF_SUCCESS.SUCCESS || degree === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS) {
       // Pernicious Poison: on success (not crit success), deal flat poison damage = poison level
-      if (degree === DEGREE_OF_SUCCESS.SUCCESS && affliction.perniciousPoisonLevel > 0) {
+      if (degree === DEGREE_OF_SUCCESS.SUCCESS && affliction.perniciousPoisonLevel > 0 && token) {
         await AfflictionChatService.promptPerniciousPoisonDamage(token, affliction);
       }
 
-      const oldStageData = null;
-      await AfflictionStore.removeAffliction(token, affliction.id);
-      await this.removeStageEffects(token, affliction, oldStageData, null);
-
-      const remainingAfflictions = AfflictionStore.getAfflictions(token);
-      if (Object.keys(remainingAfflictions).length === 0) {
-        const { VisualService } = await import('./VisualService.js');
-        await VisualService.removeAfflictionIndicator(token);
+      if (token) {
+        await AfflictionStore.removeAffliction(token, affliction.id);
+        await this.removeStageEffects(token, affliction, null, null);
+        const remainingAfflictions = AfflictionStore.getAfflictions(token);
+        if (Object.keys(remainingAfflictions).length === 0) {
+          const { VisualService } = await import('./VisualService.js');
+          await VisualService.removeAfflictionIndicator(token);
+        }
+      } else if (actor) {
+        await AfflictionStore.removeAfflictionForActor(actor, affliction.id);
       }
 
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.RESISTED', {
-        tokenName: token.name,
+        tokenName: entityName,
         afflictionName: affliction.name
       }));
       return;
     }
 
-    if (isReExposure && existingAfflictionId && affliction.type === 'poison') {
+    if (isReExposure && existingAfflictionId && affliction.type === 'poison' && token) {
       const existingAffliction = AfflictionStore.getAffliction(token, existingAfflictionId);
       if (existingAffliction) {
         await AfflictionStore.removeAffliction(token, affliction.id);
@@ -150,7 +160,7 @@ export class AfflictionService {
       onsetRemaining: AfflictionParser.durationToSeconds(affliction.onset),
       stageAdvancement: stageAdvancement,
       nextSaveRound: combat ? combat.round : null,
-      nextSaveInitiative: combat ? combat.combatants.find(c => c.tokenId === token.id)?.initiative : null,
+      nextSaveInitiative: (combat && token) ? combat.combatants.find(c => c.tokenId === token.id)?.initiative : null,
       stageStartRound: combat ? combat.round : null,
       nextSaveTimestamp: null
     };
@@ -159,7 +169,7 @@ export class AfflictionService {
       if (combat) {
         const onsetRounds = Math.ceil(updates.onsetRemaining / 6);
         updates.nextSaveRound = combat.round + onsetRounds;
-        updates.nextSaveInitiative = this.getSaveInitiative(affliction, token, combat);
+        if (token) updates.nextSaveInitiative = this.getSaveInitiative(affliction, token, combat);
       } else {
         updates.nextSaveTimestamp = game.time.worldTime + updates.onsetRemaining;
       }
@@ -177,19 +187,15 @@ export class AfflictionService {
         }
       }
 
-      await AfflictionStore.updateAffliction(token, affliction.id, updates);
-      const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
-
-      await AfflictionEffectBuilder.createOrUpdateEffect(
-        token,
-        token.actor,
-        updatedAffliction,
-        {
-          effects: '',
-          rawText: 'Onset',
-          duration: affliction.onset
-        }
-      );
+      if (token) {
+        await AfflictionStore.updateAffliction(token, affliction.id, updates);
+        const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
+        await AfflictionEffectBuilder.createOrUpdateEffect(token, actor, updatedAffliction, {
+          effects: '', rawText: 'Onset', duration: affliction.onset
+        });
+      } else if (actor) {
+        await AfflictionStore.updateAfflictionForActor(actor, affliction.id, updates);
+      }
     } else {
       const initialStage = affliction.stages[startingStage - 1];
       if (!initialStage) {
@@ -202,7 +208,7 @@ export class AfflictionService {
         const durationSeconds = await AfflictionParser.resolveStageDuration(initialDurationCopy, `${affliction.name} Stage ${startingStage}`);
         const durationRounds = Math.ceil(durationSeconds / 6);
         updates.nextSaveRound = combat.round + durationRounds;
-        updates.nextSaveInitiative = this.getSaveInitiative(affliction, token, combat);
+        if (token) updates.nextSaveInitiative = this.getSaveInitiative(affliction, token, combat);
       } else {
         const durationSeconds = await AfflictionParser.resolveStageDuration(initialDurationCopy, `${affliction.name} Stage ${startingStage}`);
         updates.nextSaveTimestamp = game.time.worldTime + durationSeconds;
@@ -221,18 +227,20 @@ export class AfflictionService {
         }
       }
 
-      await AfflictionStore.updateAffliction(token, affliction.id, updates);
-      const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
-
-      await this.applyStageEffects(token, updatedAffliction, initialStage);
-
-      if (initialStage.damage && initialStage.damage.length > 0) {
-        await this.promptDamage(token, updatedAffliction);
+      if (token) {
+        await AfflictionStore.updateAffliction(token, affliction.id, updates);
+        const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
+        await this.applyStageEffects(token, updatedAffliction, initialStage);
+        if (initialStage.damage && initialStage.damage.length > 0) {
+          await this.promptDamage(token, updatedAffliction);
+        }
+      } else if (actor) {
+        await AfflictionStore.updateAfflictionForActor(actor, affliction.id, updates);
       }
     }
 
     ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.AFFLICTED', {
-      tokenName: token.name,
+      tokenName: entityName,
       afflictionName: affliction.name
     }));
   }
@@ -241,15 +249,17 @@ export class AfflictionService {
     await AfflictionTimerService.checkForScheduledSaves(token, combat, this);
   }
 
-  static async promptSave(token, affliction) {
-    await AfflictionChatService.promptStageSave(token, affliction);
+  static async promptSave(token, affliction, actor = null) {
+    await AfflictionChatService.promptStageSave(token, affliction, actor);
   }
 
   static async promptDamage(token, affliction) {
     await AfflictionChatService.promptDamage(token, affliction);
   }
 
-  static async handleStageSave(token, affliction, saveTotal, dc, isManual = false, dieValue = null) {
+  static async handleStageSave(token, affliction, saveTotal, dc, isManual = false, dieValue = null, actor = null) {
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     const degree = this.calculateDegreeOfSuccess(saveTotal, dc, dieValue);
     const combat = game.combat;
 
@@ -258,7 +268,7 @@ export class AfflictionService {
     let showVirulentMessage = false;
 
     const fastRecoveryChange = !isManual ? FeatsService.getFastRecoveryStageChange(degree, affliction.isVirulent) : null;
-    const fastRecoveryApplied = fastRecoveryChange !== null && FeatsService.hasFastRecovery(token.actor);
+    const fastRecoveryApplied = fastRecoveryChange !== null && FeatsService.hasFastRecovery(actor);
     if (fastRecoveryApplied) {
       stageChange = fastRecoveryChange;
       newVirulentConsecutiveSuccesses = 0;
@@ -310,14 +320,17 @@ export class AfflictionService {
     if (newStage === 0) {
       const oldStageData = affliction.stages[affliction.currentStage - 1];
 
-      await AfflictionStore.removeAffliction(token, affliction.id);
-      await this.removeStageEffects(token, affliction, oldStageData, null);
-
-      const { VisualService } = await import('./VisualService.js');
-      await VisualService.removeAfflictionIndicator(token);
+      if (token) {
+        await AfflictionStore.removeAffliction(token, affliction.id);
+        await this.removeStageEffects(token, affliction, oldStageData, null);
+        const { VisualService } = await import('./VisualService.js');
+        await VisualService.removeAfflictionIndicator(token);
+      } else if (actor) {
+        await AfflictionStore.removeAfflictionForActor(actor, affliction.id);
+      }
 
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.RECOVERED', {
-        tokenName: token.name,
+        tokenName: entityName,
         afflictionName: affliction.name
       }));
       return;
@@ -331,7 +344,7 @@ export class AfflictionService {
     let finalStage = newStage;
     if (newStage > affliction.stages.length) {
       ui.notifications.error(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', {
-        tokenName: token.name,
+        tokenName: entityName,
         afflictionName: affliction.name
       }));
       finalStage = affliction.stages.length;
@@ -389,23 +402,31 @@ export class AfflictionService {
       updates.nextEffectTimestamp = null;
     }
 
-    await AfflictionStore.updateAffliction(token, affliction.id, updates);
+    if (token) {
+      await AfflictionStore.updateAffliction(token, affliction.id, updates);
+    } else if (actor) {
+      await AfflictionStore.updateAfflictionForActor(actor, affliction.id, updates);
+    }
 
-    const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
+    const updatedAffliction = token
+      ? AfflictionStore.getAffliction(token, affliction.id)
+      : AfflictionStore.getAfflictionForActor(actor, affliction.id);
 
-    await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
+    if (token) {
+      await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
 
-    if (newStageData) {
-      await this.applyStageEffects(token, updatedAffliction, newStageData);
+      if (newStageData) {
+        await this.applyStageEffects(token, updatedAffliction, newStageData);
 
-      if (newStageData.damage && newStageData.damage.length > 0) {
-        await this.promptDamage(token, updatedAffliction);
+        if (newStageData.damage && newStageData.damage.length > 0) {
+          await this.promptDamage(token, updatedAffliction);
+        }
       }
     }
 
     if (showVirulentMessage) {
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.VIRULENT_CONSECUTIVE_SUCCESS', {
-        tokenName: token.name,
+        tokenName: entityName,
         afflictionName: affliction.name
       }));
     }
@@ -416,7 +437,7 @@ export class AfflictionService {
     }
 
     ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.STAGE_CHANGED', {
-      tokenName: token.name,
+      tokenName: entityName,
       stage: finalStage,
       afflictionName: affliction.name
     }));
@@ -425,12 +446,12 @@ export class AfflictionService {
   }
 
   static async applyStageEffects(token, affliction, stage) {
-    const actor = token.actor;
+    const actor = token?.actor;
     if (!actor || !stage) return;
 
     if (stage.requiresManualHandling) {
       ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MANUAL_EFFECTS', {
-        tokenName: token.name
+        tokenName: token?.name || actor?.name || 'Unknown'
       }));
       return;
     }
@@ -472,11 +493,13 @@ export class AfflictionService {
 
     await AfflictionEffectBuilder.removePersistentDamage(actor, affliction.id);
 
-    const effectUuid = await AfflictionEffectBuilder.createOrUpdateEffect(token, actor, affliction, stage);
+    const effectUuid = token ? await AfflictionEffectBuilder.createOrUpdateEffect(token, actor, affliction, stage) : null;
     if (effectUuid && !affliction.appliedEffectUuid) {
-      await AfflictionStore.updateAffliction(token, affliction.id, {
-        appliedEffectUuid: effectUuid
-      });
+      if (token) {
+        await AfflictionStore.updateAffliction(token, affliction.id, {
+          appliedEffectUuid: effectUuid
+        });
+      }
     }
 
     await AfflictionEffectBuilder.applyPersistentConditions(actor, affliction, stage);
@@ -484,7 +507,7 @@ export class AfflictionService {
   }
 
   static async removeStageEffects(token, affliction, oldStageData = null, newStageData = null) {
-    const actor = token.actor;
+    const actor = token?.actor;
     if (!actor) return;
 
     if (!newStageData) {
@@ -585,14 +608,16 @@ export class AfflictionService {
     return AfflictionTimerService.buildExpirationData(affliction, stage, token);
   }
 
-  static async handlePoisonReExposure(token, existingAffliction, stageIncrease) {
+  static async handlePoisonReExposure(token, existingAffliction, stageIncrease, actor = null) {
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     const newStage = Math.min(
       existingAffliction.currentStage + stageIncrease,
       existingAffliction.stages.length
     );
 
     if (newStage === existingAffliction.currentStage) {
-      ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', { tokenName: token.name, afflictionName: existingAffliction.name }));
+      ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', { tokenName: entityName, afflictionName: existingAffliction.name }));
       return;
     }
 
@@ -603,21 +628,29 @@ export class AfflictionService {
       currentStage: newStage
     };
 
-    await AfflictionStore.updateAffliction(token, existingAffliction.id, updates);
+    if (token) {
+      await AfflictionStore.updateAffliction(token, existingAffliction.id, updates);
+    } else if (actor) {
+      await AfflictionStore.updateAfflictionForActor(actor, existingAffliction.id, updates);
+    }
 
-    const updatedAffliction = AfflictionStore.getAffliction(token, existingAffliction.id);
+    const updatedAffliction = token
+      ? AfflictionStore.getAffliction(token, existingAffliction.id)
+      : AfflictionStore.getAfflictionForActor(actor, existingAffliction.id);
 
-    await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
-    if (newStageData) {
-      await this.applyStageEffects(token, updatedAffliction, newStageData);
+    if (token) {
+      await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
+      if (newStageData) {
+        await this.applyStageEffects(token, updatedAffliction, newStageData);
 
-      if (newStageData.damage && newStageData.damage.length > 0) {
-        await this.promptDamage(token, updatedAffliction);
+        if (newStageData.damage && newStageData.damage.length > 0) {
+          await this.promptDamage(token, updatedAffliction);
+        }
       }
     }
 
     ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.POISON_RE_EXPOSURE', {
-      tokenName: token.name,
+      tokenName: entityName,
       afflictionName: existingAffliction.name,
       stageIncrease: stageIncrease
     }));
@@ -637,12 +670,26 @@ export class AfflictionService {
     return null;
   }
 
-  static async handleMultipleExposure(token, existingAffliction, afflictionData) {
+  static findExistingAfflictionForActor(actor, afflictionName) {
+    const afflictions = AfflictionStore.getAfflictionsForActor(actor);
+
+    for (const [_id, affliction] of Object.entries(afflictions)) {
+      if (affliction.name === afflictionName) {
+        return affliction;
+      }
+    }
+
+    return null;
+  }
+
+  static async handleMultipleExposure(token, existingAffliction, afflictionData, actor = null) {
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     const multipleExposure = afflictionData.multipleExposure;
 
     if (multipleExposure.minStage !== null && existingAffliction.currentStage < multipleExposure.minStage) {
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MULTIPLE_EXPOSURE_NO_EFFECT', {
-        tokenName: token.name,
+        tokenName: entityName,
         afflictionName: afflictionData.name,
         minStage: multipleExposure.minStage
       }));
@@ -680,21 +727,29 @@ export class AfflictionService {
       }
     }
 
-    await AfflictionStore.updateAffliction(token, existingAffliction.id, updates);
+    if (token) {
+      await AfflictionStore.updateAffliction(token, existingAffliction.id, updates);
+    } else if (actor) {
+      await AfflictionStore.updateAfflictionForActor(actor, existingAffliction.id, updates);
+    }
 
-    const updatedAffliction = AfflictionStore.getAffliction(token, existingAffliction.id);
+    const updatedAffliction = token
+      ? AfflictionStore.getAffliction(token, existingAffliction.id)
+      : AfflictionStore.getAfflictionForActor(actor, existingAffliction.id);
 
-    await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
-    if (newStageData) {
-      await this.applyStageEffects(token, updatedAffliction, newStageData);
+    if (token) {
+      await this.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
+      if (newStageData) {
+        await this.applyStageEffects(token, updatedAffliction, newStageData);
 
-      if (newStageData.damage && newStageData.damage.length > 0) {
-        await this.promptDamage(token, updatedAffliction);
+        if (newStageData.damage && newStageData.damage.length > 0) {
+          await this.promptDamage(token, updatedAffliction);
+        }
       }
     }
 
     ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MULTIPLE_EXPOSURE', {
-      tokenName: token.name,
+      tokenName: entityName,
       afflictionName: afflictionData.name,
       stageIncrease: multipleExposure.stageIncrease,
       newStage: newStage
@@ -708,7 +763,7 @@ export class AfflictionService {
     if (useAppInit && affliction.applicationInitiative != null) {
       return affliction.applicationInitiative;
     }
-    return combat?.combatants?.find(c => c.tokenId === token.id)?.initiative ?? null;
+    return combat?.combatants?.find(c => c.tokenId === token?.id)?.initiative ?? null;
   }
 
   static getDieValue(rollOrMessage) {

@@ -76,6 +76,13 @@ export function getAfflictionForActor(actor, afflictionId) {
   return afflictions[afflictionId] || null;
 }
 
+export async function addAfflictionForActor(actor, afflictionData) {
+  if (!actor || !game.user.isGM) return;
+  const afflictions = { ...getAfflictionsForActor(actor) };
+  afflictions[afflictionData.id] = afflictionData;
+  await actor.setFlag(MODULE_ID, 'afflictions', afflictions);
+}
+
 export async function updateAfflictionForActor(actor, afflictionId, updates) {
   if (!actor || !game.user.isGM) return;
   const afflictions = { ...getAfflictionsForActor(actor) };

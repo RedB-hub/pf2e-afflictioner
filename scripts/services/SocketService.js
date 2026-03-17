@@ -1,8 +1,20 @@
 import { MODULE_ID, DEGREE_OF_SUCCESS } from '../constants.js';
 import { VisualService } from './VisualService.js';
 import { AfflictionService } from './AfflictionService.js';
+import * as AfflictionStore from '../stores/AfflictionStore.js';
 
 export class SocketService {
+  /**
+   * Resolve a token from tokenId, falling back to finding a linked token via actorId.
+   */
+  static _resolveToken(tokenId, actorId) {
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    if (!token && actorId) {
+      const actor = game.actors.get(actorId);
+      if (actor) token = AfflictionStore.findTokenForActor(actor);
+    }
+    return token;
+  }
   static socket = null;
 
   static degreeToString(degree) {
@@ -73,11 +85,11 @@ export class SocketService {
     }
   }
 
-  static async requestHandleSave(tokenId, afflictionId, rollMessageId, dc) {
+  static async requestHandleSave(tokenId, afflictionId, rollMessageId, dc, actorId = null) {
     if (!this.socket) return false;
 
     try {
-      await this.socket.executeAsGM('gmHandleSave', tokenId, afflictionId, rollMessageId, dc);
+      await this.socket.executeAsGM('gmHandleSave', tokenId, afflictionId, rollMessageId, dc, actorId);
       return true;
     } catch (error) {
       console.error('PF2e Afflictioner | Error requesting save handling:', error);
@@ -85,19 +97,20 @@ export class SocketService {
     }
   }
 
-  static async gmHandleSave(tokenId, afflictionId, rollMessageId, dc) {
+  static async gmHandleSave(tokenId, afflictionId, rollMessageId, dc, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) return;
 
     const { AfflictionService } = await import('./AfflictionService.js');
-    const AfflictionStoreModule = await import('../stores/AfflictionStore.js');
 
-    const affliction = AfflictionStoreModule.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) return;
 
-    const { MODULE_ID } = await import('../constants.js');
     const requireConfirmation = game.settings.get(MODULE_ID, 'requireSaveConfirmation');
 
     if (requireConfirmation) {
@@ -106,6 +119,7 @@ export class SocketService {
         await rollMessage.update({
           'flags.pf2e-afflictioner.needsConfirmation': true,
           'flags.pf2e-afflictioner.tokenId': tokenId,
+          'flags.pf2e-afflictioner.actorId': actorId || (token?.document?.actorLink ? token.actor?.id : undefined),
           'flags.pf2e-afflictioner.afflictionId': afflictionId,
           'flags.pf2e-afflictioner.saveType': 'stage',
           'flags.pf2e-afflictioner.dc': dc
@@ -117,18 +131,18 @@ export class SocketService {
       const saveTotal = await this.getCurrentRollTotal(rollMessageId);
       const dieValue = AfflictionService.getDieValue(message);
       if (saveTotal !== null) {
-        await AfflictionService.handleStageSave(token, affliction, saveTotal, dc, false, dieValue);
+        await AfflictionService.handleStageSave(token, affliction, saveTotal, dc, false, dieValue, actor);
       } else {
         console.error('PF2e Afflictioner | Failed to read save result for immediate application');
       }
     }
   }
 
-  static async requestHandleInitialSave(tokenId, afflictionId, rollMessageId, dc) {
+  static async requestHandleInitialSave(tokenId, afflictionId, rollMessageId, dc, actorId = null) {
     if (!this.socket) return false;
 
     try {
-      await this.socket.executeAsGM('gmHandleInitialSave', tokenId, afflictionId, rollMessageId, dc);
+      await this.socket.executeAsGM('gmHandleInitialSave', tokenId, afflictionId, rollMessageId, dc, actorId);
       return true;
     } catch (error) {
       console.error('PF2e Afflictioner | Error requesting initial save handling:', error);
@@ -136,19 +150,20 @@ export class SocketService {
     }
   }
 
-  static async gmHandleInitialSave(tokenId, afflictionId, rollMessageId, dc) {
+  static async gmHandleInitialSave(tokenId, afflictionId, rollMessageId, dc, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) return;
 
     const { AfflictionService } = await import('./AfflictionService.js');
-    const AfflictionStoreModule = await import('../stores/AfflictionStore.js');
 
-    const affliction = AfflictionStoreModule.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) return;
 
-    const { MODULE_ID } = await import('../constants.js');
     const requireConfirmation = game.settings.get(MODULE_ID, 'requireSaveConfirmation');
 
     if (requireConfirmation) {
@@ -157,6 +172,7 @@ export class SocketService {
         await rollMessage.update({
           'flags.pf2e-afflictioner.needsConfirmation': true,
           'flags.pf2e-afflictioner.tokenId': tokenId,
+          'flags.pf2e-afflictioner.actorId': actorId || (token?.document?.actorLink ? token.actor?.id : undefined),
           'flags.pf2e-afflictioner.afflictionId': afflictionId,
           'flags.pf2e-afflictioner.saveType': 'initial',
           'flags.pf2e-afflictioner.dc': dc
@@ -168,7 +184,7 @@ export class SocketService {
       const saveTotal = await this.getCurrentRollTotal(rollMessageId);
       const dieValue = AfflictionService.getDieValue(message);
       if (saveTotal !== null) {
-        await AfflictionService.handleInitialSave(token, affliction, saveTotal, dc, dieValue);
+        await AfflictionService.handleInitialSave(token, affliction, saveTotal, dc, dieValue, actor);
       } else {
         console.error('PF2e Afflictioner | Failed to read save result for immediate application');
       }
@@ -187,19 +203,21 @@ export class SocketService {
     }
   }
 
-  static async gmHandleTreatment(tokenId, afflictionId, total, dc) {
+  static async gmHandleTreatment(tokenId, afflictionId, total, dc, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) return;
 
     const { TreatmentService } = await import('./TreatmentService.js');
-    const AfflictionStoreModule = await import('../stores/AfflictionStore.js');
 
-    const affliction = AfflictionStoreModule.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) return;
 
-    await TreatmentService.handleTreatmentResult(token, affliction, total, dc);
+    await TreatmentService.handleTreatmentResult(token, affliction, total, dc, actor);
   }
 
   static async requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree) {
@@ -214,22 +232,26 @@ export class SocketService {
     }
   }
 
-  static async gmHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree) {
+  static async gmHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) return;
 
     const { CounteractService } = await import('./CounteractService.js');
-    const AfflictionStoreModule = await import('../stores/AfflictionStore.js');
 
-    const affliction = AfflictionStoreModule.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) return;
 
-    await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree);
+    await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree, actor);
   }
 
   static async postSaveConfirmation(token, affliction, rollMessageId, dc, saveType) {
+    const actor = token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     const message = game.messages.get(rollMessageId);
     if (!message) {
       console.error('PF2e Afflictioner | Message not found for confirmation');
@@ -266,12 +288,12 @@ export class SocketService {
     const content = `
       <div class="pf2e-afflictioner-save-confirmation" style="border-left: 5px solid ${degreeColor}; padding: 12px; background: rgba(0,0,0,0.1); border-radius: 4px; margin: 8px 0;">
         <h3 style="margin: 0 0 8px 0;"><i class="fas fa-biohazard"></i> ${affliction.name} - ${saveTypeLabel}</h3>
-        <p style="margin: 4px 0;"><strong>${token.name}</strong> rolled <strong>${saveTotal}</strong> vs DC ${dc}</p>
+        <p style="margin: 4px 0;"><strong>${entityName}</strong> rolled <strong>${saveTotal}</strong> vs DC ${dc}</p>
         <p style="margin: 4px 0; color: ${degreeColor}; font-weight: bold;">Result: ${degreeText}</p>
         <p style="margin: 8px 0 4px 0; font-size: 0.9em; font-style: italic; color: #ccc;">${game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.AWAITING')}</p>
         <p style="margin: 4px 0; font-size: 0.85em; color: #999;">${game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.IF_REROLLED')}</p>
         <button class="affliction-confirm-save"
-                data-token-id="${token.id}"
+                data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''}
                 data-affliction-id="${affliction.id}"
                 data-roll-message-id="${rollMessageId}"
                 data-dc="${dc}"
@@ -284,13 +306,14 @@ export class SocketService {
 
     const confirmMsg = await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id),
       flags: {
         'pf2e-afflictioner': {
           isConfirmation: true,
           rollMessageId: rollMessageId,
-          tokenId: token.id,
+          tokenId: token?.id,
+          actorId: (token?.document?.actorLink ? token.actor?.id : undefined) || actor?.id,
           afflictionId: affliction.id,
           afflictionName: affliction.name,
           saveType: saveType,
@@ -341,11 +364,11 @@ export class SocketService {
     return null;
   }
 
-  static async requestApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType) {
+  static async requestApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType, actorId = null) {
     if (!this.socket) return false;
 
     try {
-      await this.socket.executeAsGM('gmApplySaveConsequences', tokenId, afflictionId, rollMessageId, dc, saveType);
+      await this.socket.executeAsGM('gmApplySaveConsequences', tokenId, afflictionId, rollMessageId, dc, saveType, actorId);
       return true;
     } catch (error) {
       console.error('PF2e Afflictioner | Error requesting save consequence application:', error);
@@ -353,16 +376,18 @@ export class SocketService {
     }
   }
 
-  static async gmApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType) {
+  static async gmApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) return;
 
     const { AfflictionService } = await import('./AfflictionService.js');
-    const AfflictionStoreModule = await import('../stores/AfflictionStore.js');
 
-    const affliction = AfflictionStoreModule.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) return;
 
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -388,9 +413,9 @@ export class SocketService {
     const dieValue = AfflictionService.getDieValue(message);
 
     if (saveType === 'initial') {
-      await AfflictionService.handleInitialSave(token, affliction, saveTotal, dc, dieValue);
+      await AfflictionService.handleInitialSave(token, affliction, saveTotal, dc, dieValue, actor);
     } else {
-      await AfflictionService.handleStageSave(token, affliction, saveTotal, dc, false, dieValue);
+      await AfflictionService.handleStageSave(token, affliction, saveTotal, dc, false, dieValue, actor);
     }
   }
 
@@ -409,20 +434,20 @@ export class SocketService {
     }
   }
 
-  static async gmRemoveAffliction(tokenId, afflictionId) {
+  static async gmRemoveAffliction(tokenId, afflictionId, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    if (token) {
+      await AfflictionStore.removeAffliction(token, afflictionId);
+    } else if (actorId) {
+      const actor = game.actors.get(actorId);
+      if (actor) await AfflictionStore.removeAfflictionForActor(actor, afflictionId);
+    } else {
+      return;
+    }
 
-    const { MODULE_ID } = await import('../constants.js');
-    const afflictions = { ...token.document.getFlag(MODULE_ID, 'afflictions') ?? {} };
-    delete afflictions[afflictionId];
-
-    const path = `flags.${MODULE_ID}.afflictions`;
-    await token.document.update({ [path]: afflictions }, { diff: false });
-
-    await this.broadcastAfflictionChange(tokenId, '', 'removed');
+    await this.broadcastAfflictionChange(tokenId || actorId, '', 'removed');
   }
 
   static async requestUpdateAfflictions(tokenId, afflictions) {
@@ -440,17 +465,20 @@ export class SocketService {
     }
   }
 
-  static async gmUpdateAfflictions(tokenId, afflictions) {
+  static async gmUpdateAfflictions(tokenId, afflictions, actorId) {
     if (!game.user.isGM) return;
 
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
+    const token = this._resolveToken(tokenId, actorId);
+    if (token) {
+      await AfflictionStore.setAfflictions(token, afflictions);
+    } else if (actorId) {
+      const actor = game.actors.get(actorId);
+      if (actor) await actor.setFlag(MODULE_ID, 'afflictions', afflictions);
+    } else {
+      return;
+    }
 
-    const { MODULE_ID } = await import('../constants.js');
-    const path = `flags.${MODULE_ID}.afflictions`;
-    await token.document.update({ [path]: afflictions }, { diff: false });
-
-    await this.broadcastAfflictionChange(tokenId, '', 'updated');
+    await this.broadcastAfflictionChange(tokenId || actorId, '', 'updated');
   }
 
   static async broadcastRefreshIndicators(tokenId) {
@@ -480,10 +508,7 @@ export class SocketService {
     }
   }
 
-  static async notifyAfflictionChange(tokenId, _afflictionName, _type) {
-    const token = canvas.tokens.get(tokenId);
-    if (!token) return;
-
+  static async notifyAfflictionChange(_entityId, _afflictionName, _type) {
     const { AfflictionManager } = await import('../managers/AfflictionManager.js');
     if (AfflictionManager.currentInstance) {
       AfflictionManager.currentInstance.render({ force: true });
@@ -591,8 +616,10 @@ export class SocketService {
     }[degree];
 
     const saveTypeLabel = saveType === 'initial' ? game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.INITIAL_SAVE') : game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.STAGE_SAVE');
-    const token = canvas.tokens.get(tokenId);
+    const flagActorId = flags.actorId;
+    const token = this._resolveToken(tokenId, flagActorId);
 
+    const actorIdAttr = flagActorId ? ` data-actor-id="${flagActorId}"` : '';
     const newContent = `
       <div class="pf2e-afflictioner-save-confirmation" style="border-left: 5px solid ${degreeColor}; padding: 12px; background: rgba(0,0,0,0.1); border-radius: 4px; margin: 8px 0;">
         <h3 style="margin: 0 0 8px 0;"><i class="fas fa-biohazard"></i> ${afflictionName} - ${saveTypeLabel}</h3>
@@ -601,7 +628,7 @@ export class SocketService {
         <p style="margin: 8px 0 4px 0; font-size: 0.9em; font-style: italic; color: #ccc;">${game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.AWAITING')}</p>
         <p style="margin: 4px 0; font-size: 0.85em; color: #ffa500;">${game.i18n.localize('PF2E_AFFLICTIONER.SAVE_CONFIRMATION.UPDATED_FROM_REROLL')}</p>
         <button class="affliction-confirm-save"
-                data-token-id="${tokenId}"
+                data-token-id="${tokenId}"${actorIdAttr}
                 data-affliction-id="${afflictionId}"
                 data-roll-message-id="${flags.rollMessageId}"
                 data-dc="${dc}"
