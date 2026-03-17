@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Automatic migration**: On first load after update, existing afflictions on linked tokens are automatically migrated from token flags to actor flags. This is a one-time operation.
+- **Full off-scene operation support**: All Affliction Manager actions (roll save, progress/regress stage, roll damage, treat, counteract, edit, remove) now work for off-scene actors. Saves post to chat with clickable roll buttons, and results are properly processed through the full save chain.
+
+### Fixed
+
+- **Compatibility with Image Hover module**: The floating monitor indicator no longer registers persistent global `mousemove`/`mouseup` listeners on `document`. These are now only attached during active drag operations, preventing interference with other modules' hover detection.
+- **Off-scene max duration tracking**: Fixed incorrect field usage (`durationElapsed` vs `maxDurationElapsed`) that could cause premature affliction removal for off-scene actors.
+- **Counteract confirmation button missing for off-scene actors**: The counteract roll message now stores `actorId` in its flags so the confirmation button renders correctly when the token is not on the current scene.
 
 ## [1.6.6] - 2026-03-17
 
