@@ -785,11 +785,14 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async rollSave(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
     if (token) {
       const affliction = AfflictionStore.getAffliction(token, afflictionId);
       await AfflictionService.promptSave(token, affliction);
+    } else if (actor) {
+      const affliction = AfflictionStore.getAfflictionForActor(actor, afflictionId);
+      await AfflictionService.promptSave(null, affliction, actor);
     } else {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
     }

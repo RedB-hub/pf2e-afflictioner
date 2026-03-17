@@ -20,12 +20,16 @@ function registerInitialSaveButtons(root) {
       if (!token && actorId) {
         token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
       }
-      if (!token) {
+
+      const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+      if (!actor) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
       }
 
-      let affliction = AfflictionStore.getAffliction(token, afflictionId);
+      let affliction = token
+        ? AfflictionStore.getAffliction(token, afflictionId)
+        : AfflictionStore.getAfflictionForActor(actor, afflictionId);
       if (!affliction) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
         return;
@@ -42,14 +46,14 @@ function registerInitialSaveButtons(root) {
       const currentDC = affliction.dc || dc;
 
       const { StoryframeIntegrationService } = await import('../services/StoryframeIntegrationService.js');
-      const sentToStoryframe = await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'initial');
+      const sentToStoryframe = token
+        ? await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'initial')
+        : false;
 
       if (sentToStoryframe) {
         btn.disabled = true;
         return;
       }
-
-      const actor = token.actor;
 
       const isBlindRoll = btn.dataset.blindRoll === 'true' || actor.type === 'npc';
 
@@ -75,7 +79,7 @@ function registerInitialSaveButtons(root) {
       }
 
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestHandleInitialSave(tokenId, afflictionId, rollMessageId, currentDC);
+      await SocketService.requestHandleInitialSave(tokenId, afflictionId, rollMessageId, currentDC, actorId);
 
       btn.disabled = true;
 
@@ -128,12 +132,16 @@ function registerStageSaveButtons(root) {
       if (!token && actorId) {
         token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
       }
-      if (!token) {
+
+      const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+      if (!actor) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
       }
 
-      let affliction = AfflictionStore.getAffliction(token, afflictionId);
+      let affliction = token
+        ? AfflictionStore.getAffliction(token, afflictionId)
+        : AfflictionStore.getAfflictionForActor(actor, afflictionId);
       if (!affliction) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
         return;
@@ -150,14 +158,14 @@ function registerStageSaveButtons(root) {
       const currentDC = affliction.dc || dc;
 
       const { StoryframeIntegrationService } = await import('../services/StoryframeIntegrationService.js');
-      const sentToStoryframe = await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'stage');
+      const sentToStoryframe = token
+        ? await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'stage')
+        : false;
 
       if (sentToStoryframe) {
         btn.disabled = true;
         return;
       }
-
-      const actor = token.actor;
 
       let rollMessageId = null;
       Hooks.once('createChatMessage', (message) => {
@@ -181,7 +189,7 @@ function registerStageSaveButtons(root) {
       }
 
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestHandleSave(tokenId, afflictionId, rollMessageId, currentDC);
+      await SocketService.requestHandleSave(tokenId, afflictionId, rollMessageId, currentDC, actorId);
 
       btn.disabled = true;
 
@@ -226,13 +234,14 @@ function registerConfirmationButtons(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const rollMessageId = btn.dataset.rollMessageId;
       const dc = parseInt(btn.dataset.dc);
       const saveType = btn.dataset.saveType;
 
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType);
+      await SocketService.requestApplySaveConsequences(tokenId, afflictionId, rollMessageId, dc, saveType, actorId);
 
       btn.disabled = true;
       btn.textContent = game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLIED');

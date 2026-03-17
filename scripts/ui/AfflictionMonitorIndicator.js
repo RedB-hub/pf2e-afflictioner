@@ -51,6 +51,7 @@ class AfflictionMonitorIndicator {
     const tokens = [];
     let totalCount = 0;
     let needsAttention = false;
+    const seenActorIds = new Set();
 
     if (!canvas.tokens) return { tokens, count: 0, needsAttention: false };
 
@@ -74,7 +75,32 @@ class AfflictionMonitorIndicator {
         tokens.push({
           token: token,
           tokenId: token.id,
+          actorId: (token.document.actorLink && token.actor) ? token.actor.id : null,
           name: token.name,
+          afflictions: afflictionList
+        });
+        if (token.document.actorLink && token.actor) seenActorIds.add(token.actor.id);
+      }
+    }
+
+    // Include off-scene linked actors with afflictions (only when showing all, not controlled)
+    if (canvas.tokens.controlled.length === 0) {
+      for (const actor of game.actors) {
+        if (seenActorIds.has(actor.id)) continue;
+        const afflictions = AfflictionStore.getAfflictionsForActor(actor);
+        const afflictionList = Object.values(afflictions);
+        if (afflictionList.length === 0) continue;
+
+        totalCount += afflictionList.length;
+        for (const aff of afflictionList) {
+          if (this.#afflictionNeedsAttention(aff)) needsAttention = true;
+        }
+
+        tokens.push({
+          token: null,
+          tokenId: null,
+          actorId: actor.id,
+          name: actor.name,
           afflictions: afflictionList
         });
       }
@@ -104,14 +130,14 @@ class AfflictionMonitorIndicator {
     return false;
   }
 
-  async openManager(tokenId = null) {
+  async openManager(tokenId = null, actorId = null) {
     if (!game.user?.isGM) return;
     try {
       const { AfflictionManager } = await import('../managers/AfflictionManager.js');
       if (AfflictionManager.currentInstance) {
         AfflictionManager.currentInstance.close();
       }
-      new AfflictionManager({ filterTokenId: tokenId }).render(true);
+      new AfflictionManager({ filterTokenId: tokenId, filterActorId: actorId }).render(true);
     } catch (e) {
       console.error('PF2e Afflictioner | Failed to open manager:', e);
     }
@@ -302,7 +328,7 @@ class AfflictionMonitorIndicator {
 
         return `
           <div class="tip-group">
-            <div class="token-header clickable" data-token-id="${t.tokenId}"><i class="fas fa-user"></i> ${t.name}</div>
+            <div class="token-header clickable" data-token-id="${t.tokenId || ''}" data-actor-id="${t.actorId || ''}"><i class="fas fa-user"></i> ${t.name}${!t.tokenId ? ' <span style="opacity:0.6">(off-scene)</span>' : ''}</div>
             ${afflictions}
           </div>
         `;
@@ -325,8 +351,9 @@ class AfflictionMonitorIndicator {
     this._tooltipEl.querySelectorAll('.token-header.clickable').forEach(header => {
       header.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        const tokenId = header.dataset.tokenId;
-        await this.openManager(tokenId);
+        const tokenId = header.dataset.tokenId || null;
+        const actorId = header.dataset.actorId || null;
+        await this.openManager(tokenId, actorId);
       });
     });
   }

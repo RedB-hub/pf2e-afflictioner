@@ -122,6 +122,13 @@ export const DEFAULT_SETTINGS = {
     default: '',
     config: false,
     restricted: true
+  },
+  'migrationVersion': {
+    scope: 'world',
+    type: Number,
+    default: 0,
+    config: false,
+    restricted: true
   }
 };
 
