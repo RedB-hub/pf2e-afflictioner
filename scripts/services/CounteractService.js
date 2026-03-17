@@ -32,7 +32,7 @@ export class CounteractService {
   }
 
   static async promptCounteract(token, affliction, casterActor = null, defaultCounterRank = null, spellEntryId = null) {
-    const afflictedActor = token.actor;
+    const afflictedActor = token?.actor;
     const { level: afflictionLevel, rank: afflictionRank } = await this.calculateAfflictionRank(affliction);
 
     const detectedEntries = [];
@@ -137,7 +137,8 @@ export class CounteractService {
     let skillDisplay = skillNames[skill];
     if (!skillDisplay && skill.startsWith('spellcasting:')) {
       const matchedEntry = detectedEntries.find(e => e.id === skill.split(':')[1]);
-      skillDisplay = matchedEntry?.name || `${matchedEntry?.tradition?.charAt(0).toUpperCase()}${matchedEntry?.tradition?.slice(1) || ''} Spellcasting`;
+      const tradition = matchedEntry?.tradition || skill.split(':')[1] || '';
+      skillDisplay = matchedEntry?.name || (tradition ? `${tradition.charAt(0).toUpperCase()}${tradition.slice(1)} Spellcasting` : 'Spellcasting');
     }
     skillDisplay = skillDisplay || skill.charAt(0).toUpperCase() + skill.slice(1);
 
@@ -147,11 +148,11 @@ export class CounteractService {
       const playerContent = `
         <div class="pf2e-afflictioner-counteract-request">
           <h3><i class="fas fa-shield-alt"></i> Counteract: ${affliction.name}</h3>
-          <p><strong>${afflictedActor.name}</strong> - Attempt to counteract affliction</p>
+          <p><strong>${afflictedActor?.name || 'Unknown'}</strong> - Attempt to counteract affliction</p>
           ${showDCToPlayers ? `<p><strong>${skillDisplay} Check DC:</strong> ${dc}</p>` : ''}
           <hr>
           <button class="affliction-roll-counteract"
-                  data-token-id="${token.id}"
+                  data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && afflictedActor) ? ` data-actor-id="${afflictedActor.id}"` : ''}
                   data-affliction-id="${affliction.id}"
                   data-counteract-rank="${counteractRank}"
                   data-affliction-rank="${afflictionRank}"
@@ -170,7 +171,9 @@ export class CounteractService {
     }
   }
 
-  static async handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree) {
+  static async handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree, actor = null) {
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     let maxRankDifference;
     switch (degree) {
       case DEGREE_OF_SUCCESS.CRITICAL_SUCCESS:
@@ -203,26 +206,32 @@ export class CounteractService {
     }
 
     const oldStageData = affliction.currentStage > 0 ? affliction.stages[affliction.currentStage - 1] : null;
-    await AfflictionStore.removeAffliction(token, affliction.id);
 
-    if (oldStageData) {
-      await AfflictionService.removeStageEffects(token, affliction, oldStageData, null);
-    }
+    if (token) {
+      await AfflictionStore.removeAffliction(token, affliction.id);
 
-    const remainingAfflictions = AfflictionStore.getAfflictions(token);
-    if (Object.keys(remainingAfflictions).length === 0) {
-      const { VisualService } = await import('./VisualService.js');
-      await VisualService.removeAfflictionIndicator(token);
+      if (oldStageData) {
+        await AfflictionService.removeStageEffects(token, affliction, oldStageData, null);
+      }
+
+      const remainingAfflictions = AfflictionStore.getAfflictions(token);
+      if (Object.keys(remainingAfflictions).length === 0) {
+        const { VisualService } = await import('./VisualService.js');
+        await VisualService.removeAfflictionIndicator(token);
+      }
+    } else if (actor) {
+      await AfflictionStore.removeAfflictionForActor(actor, affliction.id);
     }
 
     ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.COUNTERACTED', {
       afflictionName: affliction.name,
-      tokenName: token.name
+      tokenName: entityName
     }));
     return true;
   }
 
-  static async reduceAfflictionStage(token, affliction) {
+  static async reduceAfflictionStage(token, affliction, actor = null) {
+    actor = actor || token?.actor;
     const newStage = affliction.currentStage - 1;
     const combat = game.combat;
 
@@ -240,8 +249,10 @@ export class CounteractService {
         const durationSeconds = await AfflictionParser.resolveStageDuration(newStageData.duration, `${affliction.name} Stage ${newStage}`);
         const durationRounds = Math.ceil(durationSeconds / 6);
         updates.nextSaveRound = combat.round + durationRounds;
-        const tokenCombatant = combat.combatants.find(c => c.tokenId === token.id);
-        updates.nextSaveInitiative = tokenCombatant?.initiative;
+        if (token) {
+          const tokenCombatant = combat.combatants.find(c => c.tokenId === token.id);
+          updates.nextSaveInitiative = tokenCombatant?.initiative;
+        }
         updates.stageStartRound = combat.round;
       } else {
         const durationSeconds = await AfflictionParser.resolveStageDuration(newStageData.duration, `${affliction.name} Stage ${newStage}`);
@@ -249,13 +260,21 @@ export class CounteractService {
       }
     }
 
-    await AfflictionStore.updateAffliction(token, affliction.id, updates);
+    if (token) {
+      await AfflictionStore.updateAffliction(token, affliction.id, updates);
+    } else if (actor) {
+      await AfflictionStore.updateAfflictionForActor(actor, affliction.id, updates);
+    }
 
-    const updatedAffliction = AfflictionStore.getAffliction(token, affliction.id);
+    const updatedAffliction = token
+      ? AfflictionStore.getAffliction(token, affliction.id)
+      : AfflictionStore.getAfflictionForActor(actor, affliction.id);
 
-    await AfflictionService.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
-    if (newStageData) {
-      await AfflictionService.applyStageEffects(token, updatedAffliction, newStageData);
+    if (token) {
+      await AfflictionService.removeStageEffects(token, updatedAffliction, oldStageData, newStageData);
+      if (newStageData) {
+        await AfflictionService.applyStageEffects(token, updatedAffliction, newStageData);
+      }
     }
   }
 }

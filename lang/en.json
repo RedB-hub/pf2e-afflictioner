@@ -242,6 +242,8 @@
       "TREATMENT_NONE": "Treatment had no effect",
       "ALREADY_TREATED": "This affliction has already been treated this stage",
       "SELECT_TOKEN": "Select a token to perform treatment",
+      "SAVE_DUE_OFFSCENE": "{actorName} has a save due for {afflictionName} (off-scene)",
+      "SAVE_DUE_OFFSCENE_HINT": "Navigate to the actor's scene or use the Affliction Manager to roll this save.",
       "MANUAL_EFFECTS": "Stage effects require manual handling - please apply effects to {tokenName}",
       "MULTIPLE_EXPOSURE": "{tokenName} is exposed to {afflictionName} again - stage increased by {stageIncrease} to stage {newStage}!",
       "MULTIPLE_EXPOSURE_NO_EFFECT": "{tokenName} is exposed to {afflictionName} again, but current stage is too low (minimum stage {minStage} required)",

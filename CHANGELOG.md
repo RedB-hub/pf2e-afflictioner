@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-03-17
+
+### Added
+
+- **Actor-based affliction storage for linked tokens**: Afflictions on linked tokens (PCs, named NPCs) are now stored on the actor document instead of the token document. This means afflictions persist across scene changes — no more navigating back to the original scene to manage them. Unlinked tokens (mooks, summons) continue to use per-token storage.
+- **Off-scene affliction management**: The Affliction Manager now shows afflictions for actors that have no token on the current scene, with an "(off-scene)" label. All management operations (edit, remove, clear all) work for off-scene actors.
+- **Off-scene time progression**: World time advancement now correctly processes afflictions for off-scene actors (onset countdown, max duration expiry, save due notifications).
+- **Affliction Monitor off-scene support**: The floating monitor indicator now includes off-scene actor afflictions in its count and tooltip.
+
+### Changed
+
+- **Automatic migration**: On first load after update, existing afflictions on linked tokens are automatically migrated from token flags to actor flags. This is a one-time operation.
+- **Full off-scene operation support**: All Affliction Manager actions (roll save, progress/regress stage, roll damage, treat, counteract, edit, remove) now work for off-scene actors. Saves post to chat with clickable roll buttons, and results are properly processed through the full save chain.
+
+### Fixed
+
+- **Compatibility with Image Hover module**: The floating monitor indicator no longer registers persistent global `mousemove`/`mouseup` listeners on `document`. These are now only attached during active drag operations, preventing interference with other modules' hover detection.
+- **Off-scene max duration tracking**: Fixed incorrect field usage (`durationElapsed` vs `maxDurationElapsed`) that could cause premature affliction removal for off-scene actors.
+- **Counteract confirmation button missing for off-scene actors**: The counteract roll message now stores `actorId` in its flags so the confirmation button renders correctly when the token is not on the current scene.
+
 ## [1.6.6] - 2026-03-17
 
 ### Fixed

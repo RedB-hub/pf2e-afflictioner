@@ -2,6 +2,51 @@ import { MODULE_ID } from './constants.js';
 import { registerSettings } from './settings.js';
 import { registerAfflictionHooks } from './hooks/registration.js';
 
+const MIGRATION_VERSION = 1;
+
+/**
+ * One-time migration: move afflictions from linked token documents to actor documents.
+ * This ensures afflictions persist across scenes for linked tokens (PCs, named NPCs).
+ */
+async function migrateLinkedTokenAfflictions() {
+  const currentVersion = game.settings.get(MODULE_ID, 'migrationVersion') ?? 0;
+  if (currentVersion >= MIGRATION_VERSION) return;
+
+  console.log('PF2e Afflictioner | Running migration: linked token afflictions → actor storage');
+  let migratedCount = 0;
+
+  for (const scene of game.scenes) {
+    for (const tokenDoc of scene.tokens) {
+      if (!tokenDoc.actorLink) continue;
+
+      const tokenAfflictions = tokenDoc.getFlag(MODULE_ID, 'afflictions');
+      if (!tokenAfflictions || Object.keys(tokenAfflictions).length === 0) continue;
+
+      const actor = tokenDoc.actor;
+      if (!actor) continue;
+
+      // Merge into actor flags (prefer most recent by addedTimestamp on conflict)
+      const actorAfflictions = { ...actor.getFlag(MODULE_ID, 'afflictions') ?? {} };
+      for (const [id, affliction] of Object.entries(tokenAfflictions)) {
+        if (!actorAfflictions[id] || (affliction.addedTimestamp > (actorAfflictions[id].addedTimestamp ?? 0))) {
+          actorAfflictions[id] = affliction;
+        }
+      }
+
+      await actor.setFlag(MODULE_ID, 'afflictions', actorAfflictions);
+      await tokenDoc.unsetFlag(MODULE_ID, 'afflictions');
+      migratedCount += Object.keys(tokenAfflictions).length;
+    }
+  }
+
+  await game.settings.set(MODULE_ID, 'migrationVersion', MIGRATION_VERSION);
+
+  if (migratedCount > 0) {
+    console.log(`PF2e Afflictioner | Migration complete: moved ${migratedCount} affliction(s) to actor storage`);
+    ui.notifications.info(`PF2e Afflictioner: Migrated ${migratedCount} affliction(s) to actor-based storage for cross-scene persistence.`);
+  }
+}
+
 Hooks.once('init', async () => {
   registerSettings();
   registerAfflictionHooks();
@@ -31,6 +76,9 @@ Hooks.once('ready', async () => {
   if (game.user.isGM) {
     const { CommunityAfflictionsService } = await import('./services/CommunityAfflictionsService.js');
     await CommunityAfflictionsService.maybeImport();
+
+    // Migrate linked-token afflictions to actor storage (one-time)
+    await migrateLinkedTokenAfflictions();
   }
 
   if (game.user.isGM) {
@@ -42,6 +90,10 @@ Hooks.once('ready', async () => {
     });
 
     Hooks.on('updateToken', () => {
+      indicator.refresh();
+    });
+
+    Hooks.on('updateActor', () => {
       indicator.refresh();
     });
 

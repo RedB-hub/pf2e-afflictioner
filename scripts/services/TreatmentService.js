@@ -3,8 +3,9 @@ import * as AfflictionStore from '../stores/AfflictionStore.js';
 import { DEGREE_OF_SUCCESS } from '../constants.js';
 
 export class TreatmentService {
-  static async promptTreatment(token, affliction) {
-    const actor = token.actor;
+  static async promptTreatment(token, affliction, actor = null) {
+    actor = actor || token?.actor;
+    if (!actor) return;
 
     if (affliction.treatedThisStage) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.NOTIFICATIONS.ALREADY_TREATED'));
@@ -17,7 +18,7 @@ export class TreatmentService {
         <p><strong>${actor.name}</strong> needs treatment for <strong>${affliction.name}</strong></p>
         <p><em>Crit Success +4, Success +2, Failure 0, Crit Failure -2 to next save</em></p>
         <hr>
-        <button class="affliction-roll-treatment" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+        <button class="affliction-roll-treatment" data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
           <i class="fas fa-dice-d20"></i> Roll Medicine (Treat ${affliction.type === 'poison' ? 'Poison' : 'Disease'})
         </button>
       </div>
@@ -25,13 +26,14 @@ export class TreatmentService {
 
     await ChatMessage.create({
       content: content,
-      speaker: ChatMessage.getSpeaker({ token: token })
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor })
     });
   }
 
-  static async handleTreatmentResult(token, affliction, total, dc) {
+  static async handleTreatmentResult(token, affliction, total, dc, actor = null) {
     const degree = AfflictionService.calculateDegreeOfSuccess(total, dc);
-    const actor = token.actor;
+    actor = actor || token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
 
     let bonus = 0;
     switch (degree) {
@@ -49,30 +51,25 @@ export class TreatmentService {
         break;
     }
 
-    if (bonus !== 0) {
-      const effectUuid = await this.createTreatmentEffect(actor, affliction, bonus, degree);
+    const updates = bonus !== 0
+      ? { treatmentBonus: bonus, treatedThisStage: true, treatmentEffectUuid: actor ? await this.createTreatmentEffect(actor, affliction, bonus, degree) : null }
+      : { treatmentBonus: 0, treatedThisStage: true };
 
-      await AfflictionStore.updateAffliction(token, affliction.id, {
-        treatmentBonus: bonus,
-        treatedThisStage: true,
-        treatmentEffectUuid: effectUuid
-      });
-    } else {
-      await AfflictionStore.updateAffliction(token, affliction.id, {
-        treatmentBonus: 0,
-        treatedThisStage: true
-      });
+    if (token) {
+      await AfflictionStore.updateAffliction(token, affliction.id, updates);
+    } else if (actor) {
+      await AfflictionStore.updateAfflictionForActor(actor, affliction.id, updates);
     }
 
     if (bonus > 0) {
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.TREATMENT_POSITIVE', {
-        tokenName: token.name,
+        tokenName: entityName,
         bonus: bonus,
         afflictionName: affliction.name
       }));
     } else if (bonus < 0) {
       ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.TREATMENT_NEGATIVE', {
-        tokenName: token.name,
+        tokenName: entityName,
         bonus: bonus,
         afflictionName: affliction.name
       }));

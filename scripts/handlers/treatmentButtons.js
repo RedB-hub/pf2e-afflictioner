@@ -6,23 +6,31 @@ export function registerTreatmentButtonHandlers(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const dc = parseInt(btn.dataset.dc);
 
-      const token = canvas.tokens.get(tokenId);
-      if (!token) {
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
+
+      const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+      if (!actor) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
       }
 
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+      const affliction = token
+        ? AfflictionStore.getAffliction(token, afflictionId)
+        : AfflictionStore.getAfflictionForActor(actor, afflictionId);
       if (!affliction) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
         return;
       }
 
-      const treater = canvas.tokens.controlled[0] || token;
-      const treatingActor = treater.actor;
+      const treater = canvas.tokens.controlled[0];
+      const treatingActor = treater?.actor || actor;
 
       if (!treatingActor.skills?.medicine) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.NO_MEDICINE_SKILL'));
@@ -32,7 +40,7 @@ export function registerTreatmentButtonHandlers(root) {
       const roll = await treatingActor.skills.medicine.roll({ dc: { value: dc } });
 
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestHandleTreatment(tokenId, afflictionId, roll.total, dc);
+      await SocketService.requestHandleTreatment(tokenId, afflictionId, roll.total, dc, actorId);
 
       btn.disabled = true;
     });

@@ -159,15 +159,18 @@ function registerMaxDurationRemovalHandler(root) {
   removeBtn.addEventListener('click', async (event) => {
     const button = event.currentTarget;
     const tokenId = button.dataset.tokenId;
+    const actorId = button.dataset.actorId;
     const afflictionId = button.dataset.afflictionId;
 
-    const token = canvas.tokens.get(tokenId);
+    const AfflictionStore = await import('../stores/AfflictionStore.js');
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    if (!token && actorId) {
+      token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+    }
     if (!token) {
       ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
       return;
     }
-
-    const AfflictionStore = await import('../stores/AfflictionStore.js');
     const affliction = AfflictionStore.getAffliction(token, afflictionId);
     if (!affliction) {
       ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
@@ -224,9 +227,14 @@ function registerDeathConfirmationHandler(root) {
   killBtn.addEventListener('click', async (event) => {
     const button = event.currentTarget;
     const tokenId = button.dataset.tokenId;
+    const actorId = button.dataset.actorId;
     const afflictionId = button.dataset.afflictionId;
 
-    const token = canvas.tokens.get(tokenId);
+    const AfflictionStore = await import('../stores/AfflictionStore.js');
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    if (!token && actorId) {
+      token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+    }
     if (!token) {
       ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
       return;
@@ -237,8 +245,6 @@ function registerDeathConfirmationHandler(root) {
       ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.ACTOR_NOT_FOUND'));
       return;
     }
-
-    const AfflictionStore = await import('../stores/AfflictionStore.js');
     const affliction = AfflictionStore.getAffliction(token, afflictionId);
 
     await actor.update({ 'system.attributes.hp.value': 0 });

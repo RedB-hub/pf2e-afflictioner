@@ -9,12 +9,16 @@ export function registerCounteractButtonHandlers(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const counteractRank = parseInt(btn.dataset.counteractRank);
       const afflictionRank = parseInt(btn.dataset.afflictionRank);
       const degree = btn.dataset.degree;
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
 
       const affliction = AfflictionStore.getAffliction(token, afflictionId);
@@ -38,13 +42,17 @@ export function registerCounteractButtonHandlers(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const counteractRank = parseInt(btn.dataset.counteractRank);
       const afflictionRank = parseInt(btn.dataset.afflictionRank);
       const dc = parseInt(btn.dataset.dc);
       const skill = btn.dataset.skill || 'medicine';
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
@@ -112,7 +120,7 @@ export function registerCounteractButtonHandlers(root) {
           await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree);
         } else {
           const { SocketService } = await import('../services/SocketService.js');
-          await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree);
+          await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId);
         }
         btn.disabled = true;
         return;
@@ -125,6 +133,7 @@ export function registerCounteractButtonHandlers(root) {
             'pf2e-afflictioner': {
               needsCounteractConfirmation: true,
               tokenId,
+              actorId,
               afflictionId,
               counteractRank,
               afflictionRank,
@@ -144,7 +153,7 @@ export async function injectCounteractConfirmButton(message, root) {
   if (!message.flags?.['pf2e-afflictioner']?.needsCounteractConfirmation) return;
 
   const flags = message.flags['pf2e-afflictioner'];
-  const { tokenId, afflictionId, counteractRank, afflictionRank, dc } = flags;
+  const { tokenId, actorId, afflictionId, counteractRank, afflictionRank, dc } = flags;
 
   const roll = message.rolls?.[0];
   if (!roll) return;
@@ -197,23 +206,31 @@ export async function injectCounteractConfirmButton(message, root) {
   applyBtn.className = 'pf2e-afflictioner-btn affliction-apply-counteract';
   applyBtn.style.cssText = `width:100%; background:${color}; border:none; color:white; padding:6px; border-radius:4px; cursor:pointer;`;
   applyBtn.textContent = game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLY_COUNTERACT');
-  applyBtn.dataset.tokenId = tokenId;
+  applyBtn.dataset.tokenId = tokenId || '';
+  if (actorId) applyBtn.dataset.actorId = actorId;
   applyBtn.dataset.afflictionId = afflictionId;
   applyBtn.dataset.counteractRank = counteractRank;
   applyBtn.dataset.afflictionRank = afflictionRank;
   applyBtn.dataset.degree = degree;
 
   applyBtn.addEventListener('click', async () => {
-    const token = canvas.tokens.get(tokenId);
-    if (!token) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    if (!token && actorId) {
+      token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+    }
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
+
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND')); return; }
 
     if (game.user.isGM) {
-      await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree);
+      await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree, actor);
     } else {
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree);
+      await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId);
     }
     applyBtn.disabled = true;
     applyBtn.textContent = `✓ ${game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLIED')}`;

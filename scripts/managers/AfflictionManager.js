@@ -59,6 +59,7 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     }
 
     this.filterTokenId = options.filterTokenId || null;
+    this.filterActorId = options.filterActorId || null;
     this._activeTab = 'afflictions';
     AfflictionManager.currentInstance = this;
     this._setupAutoRefresh();
@@ -74,6 +75,10 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     });
 
     this._worldTimeHook = Hooks.on('updateWorldTime', (_worldTime, _delta) => {
+      this.render({ force: true });
+    });
+
+    this._actorUpdateHook = Hooks.on('updateActor', () => {
       this.render({ force: true });
     });
   }
@@ -247,6 +252,9 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     if (this._worldTimeHook) {
       Hooks.off('updateWorldTime', this._worldTimeHook);
     }
+    if (this._actorUpdateHook) {
+      Hooks.off('updateActor', this._actorUpdateHook);
+    }
 
     this._dropHandlersInitialized = false;
 
@@ -254,8 +262,36 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     return super.close(options);
   }
 
+  _enrichAfflictions(afflictions) {
+    return Object.values(afflictions).map(aff => {
+      const stageIndex = aff.currentStage - 1;
+      const currentStage = (stageIndex >= 0 && aff.stages) ? aff.stages[stageIndex] : undefined;
+      const hasDamage = currentStage && currentStage.damage && currentStage.damage.length > 0;
+
+      return {
+        ...aff,
+        stageDisplay: aff.currentStage === -1
+          ? game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.INITIAL_SAVE')
+          : aff.inOnset
+            ? game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.ONSET')
+            : `${game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.STAGE')} ${aff.currentStage}`,
+        nextSaveDisplay: this.formatNextSave(aff),
+        treatmentDisplay: this.formatTreatment(aff),
+        hasWarning: currentStage?.requiresManualHandling || false,
+        hasDamage: hasDamage,
+        stageTooltip: this.formatStageTooltip(aff),
+        isVirulent: aff.isVirulent || false,
+        hasMultipleExposure: aff.multipleExposure?.enabled || false,
+        multipleExposureIncrease: aff.multipleExposure?.stageIncrease || 0,
+        canProgressStage: aff.currentStage < (aff.stages?.length ?? 0),
+        canRegressStage: aff.currentStage > 1
+      };
+    });
+  }
+
   async _prepareContext(_options) {
     const tokensWithAfflictions = [];
+    const seenActorIds = new Set();
 
     const tokensToCheck = this.filterTokenId
       ? [canvas.tokens.get(this.filterTokenId)].filter(t => t)
@@ -286,35 +322,37 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
       const updatedAfflictions = AfflictionStore.getAfflictions(token);
       if (Object.keys(updatedAfflictions).length > 0) {
+        const actorId = (token.document.actorLink && token.actor) ? token.actor.id : null;
+        if (actorId) seenActorIds.add(actorId);
         tokensWithAfflictions.push({
           token: token,
           tokenId: token.id,
+          actorId,
           name: token.name,
           img: token.document.texture.src,
-          afflictions: Object.values(updatedAfflictions).map(aff => {
-            const stageIndex = aff.currentStage - 1;
-            const currentStage = (stageIndex >= 0 && aff.stages) ? aff.stages[stageIndex] : undefined;
-            const hasDamage = currentStage && currentStage.damage && currentStage.damage.length > 0;
+          afflictions: this._enrichAfflictions(updatedAfflictions)
+        });
+      }
+    }
 
-            return {
-              ...aff,
-              stageDisplay: aff.currentStage === -1
-                ? game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.INITIAL_SAVE')
-                : aff.inOnset
-                  ? game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.ONSET')
-                  : `${game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.STAGE')} ${aff.currentStage}`,
-              nextSaveDisplay: this.formatNextSave(aff),
-              treatmentDisplay: this.formatTreatment(aff),
-              hasWarning: currentStage?.requiresManualHandling || false,
-              hasDamage: hasDamage,
-              stageTooltip: this.formatStageTooltip(aff),
-              isVirulent: aff.isVirulent || false,
-              hasMultipleExposure: aff.multipleExposure?.enabled || false,
-              multipleExposureIncrease: aff.multipleExposure?.stageIncrease || 0,
-              canProgressStage: aff.currentStage < (aff.stages?.length ?? 0),
-              canRegressStage: aff.currentStage > 1
-            };
-          })
+    // Off-scene linked actors with afflictions (not already shown via a canvas token)
+    if (!this.filterTokenId) {
+      const actorsToCheck = this.filterActorId
+        ? [game.actors.get(this.filterActorId)].filter(a => a)
+        : game.actors.contents;
+
+      for (const actor of actorsToCheck) {
+        if (seenActorIds.has(actor.id)) continue;
+        const afflictions = AfflictionStore.getAfflictionsForActor(actor);
+        if (Object.keys(afflictions).length === 0) continue;
+
+        tokensWithAfflictions.push({
+          token: null,
+          tokenId: null,
+          actorId: actor.id,
+          name: actor.name,
+          img: actor.img,
+          afflictions: this._enrichAfflictions(afflictions)
         });
       }
     }
@@ -552,34 +590,54 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
     new AddAfflictionDialog(token).render(true);
   }
 
+  /**
+   * Resolve a token and/or actor from a button's dataset.
+   * Returns { token, actor } where token may be null for off-scene actors.
+   */
+  static _resolveTarget(button) {
+    const tokenId = button.dataset.tokenId;
+    const actorId = button.dataset.actorId;
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    const actor = actorId ? game.actors.get(actorId) : token?.actor;
+    if (!token && actor) token = AfflictionStore.findTokenForActor(actor);
+    return { token, actor };
+  }
+
   static async removeAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (!token) {
+    if (!token && !actor) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
       return;
     }
 
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
 
     const oldStageData = affliction?.currentStage > 0
       ? affliction.stages[affliction.currentStage - 1]
       : null;
 
-    await AfflictionStore.removeAffliction(token, afflictionId);
+    if (token) {
+      await AfflictionStore.removeAffliction(token, afflictionId);
+    } else {
+      await AfflictionStore.removeAfflictionForActor(actor, afflictionId);
+    }
 
-    if (affliction) {
+    if (affliction && token) {
       await AfflictionService.removeStageEffects(token, affliction, oldStageData, null);
     }
 
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    const remainingAfflictions = AfflictionStore.getAfflictions(token);
-    if (Object.keys(remainingAfflictions).length === 0) {
-      const { VisualService } = await import('../services/VisualService.js');
-      await VisualService.removeAfflictionIndicator(token);
+    if (token) {
+      const remainingAfflictions = AfflictionStore.getAfflictions(token);
+      if (Object.keys(remainingAfflictions).length === 0) {
+        const { VisualService } = await import('../services/VisualService.js');
+        await VisualService.removeAfflictionIndicator(token);
+      }
     }
 
     this.render({ force: true });
@@ -587,15 +645,16 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async editAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (!token) {
+    if (!token && !actor) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
       return;
     }
 
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
       return;
@@ -621,12 +680,13 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
     if (!confirmed) return;
 
+    let clearedCount = 0;
+    const clearedNames = [];
+
+    // Clear on-scene tokens
     const tokensToCheck = this.filterTokenId
       ? [canvas.tokens.get(this.filterTokenId)].filter(t => t)
       : canvas.tokens.placeables;
-
-    let clearedCount = 0;
-    const clearedTokens = [];
 
     for (const token of tokensToCheck) {
       const afflictions = AfflictionStore.getAfflictions(token);
@@ -647,14 +707,33 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
       const { VisualService } = await import('../services/VisualService.js');
       await VisualService.removeAfflictionIndicator(token);
+      clearedNames.push(token.name);
+    }
 
-      clearedTokens.push(token.name);
+    // Clear off-scene actor afflictions
+    if (!this.filterTokenId) {
+      const seenActorIds = new Set(tokensToCheck
+        .filter(t => t.document.actorLink && t.actor)
+        .map(t => t.actor.id));
+
+      for (const actor of game.actors) {
+        if (seenActorIds.has(actor.id)) continue;
+        const afflictions = AfflictionStore.getAfflictionsForActor(actor);
+        const afflictionIds = Object.keys(afflictions);
+        if (afflictionIds.length === 0) continue;
+
+        for (const afflictionId of afflictionIds) {
+          await AfflictionStore.removeAfflictionForActor(actor, afflictionId);
+          clearedCount++;
+        }
+        clearedNames.push(actor.name);
+      }
     }
 
     if (clearedCount > 0) {
       ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.MANAGER.CLEARED_ALL', {
         count: clearedCount,
-        tokens: clearedTokens.join(', ')
+        tokens: clearedNames.join(', ')
       }));
     } else {
       ui.notifications.info(game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.NO_AFFLICTIONS_TO_CLEAR'));
@@ -665,74 +744,99 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async progressStage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
+    const entityName = token?.name || actor?.name || 'Unknown';
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-      if (affliction.currentStage >= affliction.stages.length) {
-        ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', {
-          tokenName: token.name,
-          afflictionName: affliction.name
-        }));
-        return;
-      }
-
-      await AfflictionService.handleStageSave(token, affliction, 10, 15, true);
-      this.render({ force: true });
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    if (affliction.currentStage >= affliction.stages.length) {
+      ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', {
+        tokenName: entityName,
+        afflictionName: affliction.name
+      }));
+      return;
+    }
+
+    await AfflictionService.handleStageSave(token, affliction, 10, 15, true, null, actor);
+    this.render({ force: true });
   }
 
   static async regressStage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
+    const entityName = token?.name || actor?.name || 'Unknown';
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-      if (affliction.currentStage <= 1) {
-        ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.MANAGER.AT_STAGE_ONE', { tokenName: token.name, afflictionName: affliction.name }));
-        return;
-      }
-
-      await AfflictionService.handleStageSave(token, affliction, 15, 10, true);
-      this.render({ force: true });
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    if (affliction.currentStage <= 1) {
+      ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.MANAGER.AT_STAGE_ONE', { tokenName: entityName, afflictionName: affliction.name }));
+      return;
+    }
+
+    await AfflictionService.handleStageSave(token, affliction, 15, 10, true, null, actor);
+    this.render({ force: true });
   }
 
   static async rollSave(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await AfflictionService.promptSave(token, affliction);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await AfflictionService.promptSave(token, affliction, actor);
   }
 
   static async rollDamage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await AfflictionService.promptDamage(token, affliction);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await AfflictionService.promptDamage(token, affliction, actor);
   }
 
   static async treatAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await TreatmentService.promptTreatment(token, affliction);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await TreatmentService.promptTreatment(token, affliction, actor);
   }
 
   static async openPoisonItem(_event, button) {
@@ -834,15 +938,12 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async counteractAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const tokenId = button.dataset.tokenId;
-    const token = canvas.tokens.get(tokenId);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (!token) {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
-      return;
-    }
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
     if (!affliction) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
       return;

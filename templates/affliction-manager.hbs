@@ -45,46 +45,46 @@
 
               <div class="affliction-actions">
                 <button type="button" data-action="editAffliction"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.EDITOR.EDIT_AFFLICTION'}}">
                   <i class="fas fa-pencil-alt"></i>
                 </button>
                 <button type="button" data-action="rollSave"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.ROLL_SAVE'}}">
                   <i class="fas fa-dice-d20"></i>
                 </button>
                 {{#if hasDamage}}
                 <button type="button" data-action="rollDamage"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.ROLL_DAMAGE'}}">
                   <i class="fas fa-heart-broken"></i>
                 </button>
                 {{/if}}
                 <button type="button" data-action="treatAffliction"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.TREAT'}}">
                   <i class="fas fa-medkit"></i>
                 </button>
                 <button type="button" data-action="counteractAffliction"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="Counteract affliction (e.g., Cleanse Affliction spell)">
                   <i class="fas fa-shield-alt"></i>
                 </button>
                 <button type="button" data-action="progressStage"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.PROGRESS_STAGE'}}"
                         {{#unless canProgressStage}}disabled{{/unless}}>
                   <i class="fas fa-arrow-up"></i>
                 </button>
                 <button type="button" data-action="regressStage"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.REGRESS_STAGE'}}"
                         {{#unless canRegressStage}}disabled{{/unless}}>
                   <i class="fas fa-arrow-down"></i>
                 </button>
                 <button type="button" data-action="removeAffliction"
-                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}"
+                        data-affliction-id="{{id}}" data-token-id="{{../tokenId}}" data-actor-id="{{../actorId}}"
                         data-tooltip="{{localize 'PF2E_AFFLICTIONER.MANAGER.REMOVE_AFFLICTION'}}">
                   <i class="fas fa-times"></i>
                 </button>

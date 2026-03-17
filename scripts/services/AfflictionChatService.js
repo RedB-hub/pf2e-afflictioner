@@ -7,7 +7,7 @@ export class AfflictionChatService {
   }
 
   static async promptInitialSave(token, affliction, afflictionData, afflictionId) {
-    const actor = token.actor;
+    const actor = token?.actor || affliction?.actor;
     const showDCToPlayers = game.pf2e?.settings?.metagame?.dcs ?? true;
     const anonymizeSaves = game.settings.get(MODULE_ID, 'anonymizeSaveMessages') ?? false;
     const gmRollMysteriousSaves = game.settings.get(MODULE_ID, 'gmRollMysteriousSaves') ?? false;
@@ -24,7 +24,7 @@ export class AfflictionChatService {
           <p><em style="font-size: 0.9em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_PREFIX')} ${afflictionData.onset ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_ONSET') : game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_NO_EFFECTS')}</em></p>
           <hr>
           <button class="affliction-roll-initial-save"
-                  data-token-id="${token.id}"
+                  data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''}
                   data-affliction-id="${afflictionId}"
                   data-dc="${afflictionData.dc}"
                   data-blind-roll="true"
@@ -35,14 +35,16 @@ export class AfflictionChatService {
       `;
       await ChatMessage.create({
         content: gmContent,
-        speaker: ChatMessage.getSpeaker({ token: token }),
+        speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
         whisper: game.users.filter(u => u.isGM).map(u => u.id)
       });
       return;
     }
 
     const { StoryframeIntegrationService } = await import('./StoryframeIntegrationService.js');
-    const sentToStoryframe = await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'initial');
+    const sentToStoryframe = token
+      ? await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'initial')
+      : false;
 
     if (!sentToStoryframe) {
       const playerContent = this._buildInitialSaveMessage(
@@ -61,7 +63,7 @@ export class AfflictionChatService {
       if (whisperTargets.length > 0) {
         await ChatMessage.create({
           content: playerContent,
-          speaker: ChatMessage.getSpeaker({ token: token }),
+          speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
           whisper: whisperTargets
         });
       }
@@ -75,7 +77,7 @@ export class AfflictionChatService {
       `;
       await ChatMessage.create({
         content: gmContent,
-        speaker: ChatMessage.getSpeaker({ token: token }),
+        speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
         whisper: game.users.filter(u => u.isGM).map(u => u.id)
       });
     }
@@ -96,13 +98,17 @@ export class AfflictionChatService {
     return !hasConditions && !hasWeakness && !hasDamage;
   }
 
-  static async promptStageSave(token, affliction) {
-    const actor = token.actor;
+  static async promptStageSave(token, affliction, actor = null) {
+    actor = actor || token?.actor;
+    if (!actor) return;
+
     const showDCToPlayers = game.pf2e?.settings?.metagame?.dcs ?? true;
     const anonymizeSaves = game.settings.get(MODULE_ID, 'anonymizeSaveMessages') ?? false;
 
     const { StoryframeIntegrationService } = await import('./StoryframeIntegrationService.js');
-    const sentToStoryframe = await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'stage');
+    const sentToStoryframe = token
+      ? await StoryframeIntegrationService.sendSaveRequest(token, affliction, 'stage')
+      : false;
 
     if (!sentToStoryframe) {
       const playerContent = this._buildStageSaveMessage(
@@ -117,16 +123,23 @@ export class AfflictionChatService {
         ? game.users.filter(u => !u.isGM && actor.testUserPermission(u, 'OWNER')).map(u => u.id)
         : game.users.filter(u => u.isGM).map(u => u.id);
 
+      const speaker = token
+        ? ChatMessage.getSpeaker({ token })
+        : ChatMessage.getSpeaker({ actor });
+
       if (whisperTargets.length > 0) {
         await ChatMessage.create({
           content: playerContent,
-          speaker: ChatMessage.getSpeaker({ token: token }),
+          speaker,
           whisper: whisperTargets
         });
       }
     }
 
     if (!showDCToPlayers && actor.hasPlayerOwner) {
+      const speaker = token
+        ? ChatMessage.getSpeaker({ token })
+        : ChatMessage.getSpeaker({ actor });
       const gmContent = `
         <div class="pf2e-afflictioner-save-request" style="border-color: #8b0000; padding: 8px;">
           <p style="margin: 0;"><strong>${affliction.name} - DC ${affliction.dc}</strong> (${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_INFO')}) - ${game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.STAGE')} ${affliction.currentStage}</p>
@@ -134,14 +147,15 @@ export class AfflictionChatService {
       `;
       await ChatMessage.create({
         content: gmContent,
-        speaker: ChatMessage.getSpeaker({ token: token }),
+        speaker,
         whisper: game.users.filter(u => u.isGM).map(u => u.id)
       });
     }
   }
 
-  static async promptDamage(token, affliction) {
-    const actor = token.actor;
+  static async promptDamage(token, affliction, actor = null) {
+    actor = actor || token?.actor;
+    if (!actor) return;
 
     const currentStageIndex = affliction.currentStage - 1;
     if (currentStageIndex < 0 || !affliction.stages || !affliction.stages[currentStageIndex]) {
@@ -190,7 +204,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>
       </div>
@@ -198,13 +212,17 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static _buildInitialSaveMessage(actor, token, afflictionData, afflictionId, showDCToPlayers, anonymizeSaves) {
     const saveTypeLabel = this._capitalize(afflictionData.saveType || 'fortitude');
+    const tokenIdAttr = token ? `data-token-id="${token.id}"` : '';
+    const actorIdAttr = (token?.document?.actorLink && token?.actor) || (!token && actor) ? `data-actor-id="${actor.id}"` : '';
+    const idAttrs = `${tokenIdAttr} ${actorIdAttr}`.trim();
+
     if (anonymizeSaves) {
       return `
         <div class="pf2e-afflictioner-save-request">
@@ -212,7 +230,7 @@ export class AfflictionChatService {
           <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.NEEDS_FORTITUDE_SAVE', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
           <hr>
           <button class="affliction-roll-initial-save"
-                  data-token-id="${token.id}"
+                  ${idAttrs}
                   data-affliction-id="${afflictionId}"
                   data-dc="${afflictionData.dc}"
                   style="width: 100%; padding: 8px; margin-top: 10px;">
@@ -229,7 +247,7 @@ export class AfflictionChatService {
         <p>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAKE_FORTITUDE_RESIST', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
         <hr>
         <button class="affliction-roll-initial-save"
-                data-token-id="${token.id}"
+                ${idAttrs}
                 data-affliction-id="${afflictionId}"
                 data-dc="${afflictionData.dc}"
                 style="width: 100%; padding: 8px; margin-top: 10px;">
@@ -241,6 +259,10 @@ export class AfflictionChatService {
 
   static _buildStageSaveMessage(actor, token, affliction, showDCToPlayers, anonymizeSaves) {
     const saveTypeLabel = this._capitalize(affliction.saveType || 'fortitude');
+    const tokenIdAttr = token ? `data-token-id="${token.id}"` : '';
+    const actorIdAttr = actor ? `data-actor-id="${actor.id}"` : '';
+    const idAttrs = `${tokenIdAttr} ${actorIdAttr}`.trim();
+
     if (anonymizeSaves) {
       return `
         <div class="pf2e-afflictioner-save-request">
@@ -249,7 +271,7 @@ export class AfflictionChatService {
           ${showDCToPlayers ? `<p><strong>DC:</strong> ${affliction.dc}</p>` : ''}
           ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
           <hr>
-          <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+          <button class="affliction-roll-save" ${idAttrs} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
             <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
           </button>
         </div>
@@ -265,7 +287,7 @@ export class AfflictionChatService {
         ${affliction.isVirulent ? `<p><em style="color: #c45500; font-size: 0.75em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.VIRULENT_NOTE')}</em></p>` : ''}
         ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
         <hr>
-        <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+        <button class="affliction-roll-save" ${idAttrs} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
           <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
         </button>
       </div>
@@ -273,6 +295,8 @@ export class AfflictionChatService {
   }
 
   static async postMaxDurationExpired(token, affliction) {
+    const actor = token?.actor;
+    const entityName = token?.name || actor?.name || 'Unknown';
     const maxDurationText = affliction.maxDuration
       ? `${affliction.maxDuration.value} ${affliction.maxDuration.unit}(s)`
       : 'unknown';
@@ -280,12 +304,12 @@ export class AfflictionChatService {
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #6C757D;">
         <h3><i class="fas fa-hourglass-end"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAX_DURATION_HEADING', { afflictionName: affliction.name })}</h3>
-        <p><strong>${token.name}</strong>'s ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAX_DURATION_REACHED_NOTE', { duration: maxDurationText })}</p>
+        <p><strong>${entityName}</strong>'s ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAX_DURATION_REACHED_NOTE', { duration: maxDurationText })}</p>
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.MAX_DURATION_PERSIST_NOTE')}</strong></p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_WHEN_EXPIRED')} ${affliction.currentStage}</em></p>
         <div class="pf2e-afflictioner-button-group" style="margin-top: 10px;">
           <button class="pf2e-afflictioner-btn pf2e-afflictioner-remove-expired-btn"
-                  data-token-id="${token.id}"
+                  data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''}
                   data-affliction-id="${affliction.id}"
                   style="background: #dc3545;">
             <i class="fas fa-trash-alt"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.REMOVE_CONDITIONS_PERSIST')}
@@ -296,13 +320,14 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async promptPerniciousPoisonDamage(token, affliction) {
-    const actor = token.actor;
+    const actor = token?.actor;
+    if (!actor) return;
     const level = affliction.perniciousPoisonLevel || 0;
     if (!level) return;
 
@@ -315,7 +340,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLink}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>
       </div>
@@ -323,12 +348,14 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async postStageChange(token, affliction, oldStage, newStage, options = {}) {
+    const actor = token?.actor;
+    const entityName = token?.name || actor?.name || affliction.name;
     const oldStageText = oldStage === 0 ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.INITIAL_EXPOSURE') : `${game.i18n.localize('PF2E_AFFLICTIONER.MANAGER.STAGE')} ${oldStage}`;
     const stageDirection = newStage > oldStage ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_INCREASED') : game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_DECREASED');
     const stageIcon = newStage > oldStage ? 'fa-arrow-up' : 'fa-arrow-down';
@@ -360,7 +387,7 @@ export class AfflictionChatService {
     }
 
     const fastRecoveryNote = (options.fastRecovery && newStage < oldStage)
-      ? `<div style="margin-top:6px;padding:5px 8px;background:rgba(0,0,0,0.3);border-left:3px solid #4a9c2a;border-radius:3px;font-size:0.85em;color:#f5f5f5;"><i class="fas fa-bolt" style="margin-right:4px;"></i>${game.i18n.format('PF2E_AFFLICTIONER.FEATS.FAST_RECOVERY_STAGE_CHANGE', { tokenName: token.name, afflictionName: affliction.name, stages: oldStage - newStage })}</div>`
+      ? `<div style="margin-top:6px;padding:5px 8px;background:rgba(0,0,0,0.3);border-left:3px solid #4a9c2a;border-radius:3px;font-size:0.85em;color:#f5f5f5;"><i class="fas fa-bolt" style="margin-right:4px;"></i>${game.i18n.format('PF2E_AFFLICTIONER.FEATS.FAST_RECOVERY_STAGE_CHANGE', { tokenName: entityName, afflictionName: affliction.name, stages: oldStage - newStage })}</div>`
       : '';
 
     const content = `
@@ -369,7 +396,7 @@ export class AfflictionChatService {
           <i class="fas ${stageIcon}" style="color: ${stageColor}; font-size: 24px;"></i>
           <div style="flex: 1;">
             <h3 style="margin: 0; font-size: 1.2em; color: ${stageColor};">${affliction.name} - ${stageDirection}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 0.95em;"><strong>${token.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.IS_NOW_AT_STAGE', { stage: newStage })} <span style="color: #888;">${game.i18n.format('PF2E_AFFLICTIONER.CHAT.WAS_STAGE', { stage: oldStageText })}</span></p>
+            <p style="margin: 4px 0 0 0; font-size: 0.95em;"><strong>${entityName}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.IS_NOW_AT_STAGE', { stage: newStage })} <span style="color: #888;">${game.i18n.format('PF2E_AFFLICTIONER.CHAT.WAS_STAGE', { stage: oldStageText })}</span></p>
           </div>
         </div>
         ${effectsSummary}
@@ -380,22 +407,22 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content: content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async promptDeathConfirmation(token, affliction) {
-    const actor = token.actor;
+    const actor = token?.actor;
 
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #4a0000;">
         <h3><i class="fas fa-skull-crossbones"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.LETHAL_STAGE_HEADING', { afflictionName: affliction.name })}</h3>
-        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.REACHED_LETHAL_STAGE', { afflictionName: affliction.name, stage: affliction.currentStage })}</p>
+        <p><strong>${actor?.name || 'Unknown'}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.REACHED_LETHAL_STAGE', { afflictionName: affliction.name, stage: affliction.currentStage })}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.LETHAL_NOTE')}</em></p>
         <hr>
         <button class="pf2e-afflictioner-btn pf2e-afflictioner-confirm-kill-btn"
-                data-token-id="${token.id}"
+                data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''}
                 data-affliction-id="${affliction.id}"
                 style="width: 100%; padding: 8px; margin-top: 10px; background: #8b0000;">
           <i class="fas fa-skull"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CONFIRM_KILL')}
@@ -405,16 +432,18 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async postPoisonReExposure(token, affliction, stageIncrease, newStage) {
+    const actor = token?.actor;
+    const entityName = token?.name || actor?.name || affliction.name;
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #8b008b;">
         <h3><i class="fas fa-biohazard"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.POISON_RE_EXPOSURE_HEADING', { afflictionName: affliction.name })}</h3>
-        <p><strong>${token.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EXPOSED_AGAIN', { afflictionName: affliction.name })}</p>
+        <p><strong>${entityName}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EXPOSED_AGAIN', { afflictionName: affliction.name })}</p>
         <p>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FAILED_INITIAL_SAVE_STAGE', { stageIncrease, newStage })}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.MAX_DURATION_UNCHANGED')}</em></p>
       </div>
@@ -422,16 +451,18 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async postMultipleExposure(token, afflictionData, multipleExposure, newStage) {
+    const actor = token?.actor;
+    const entityName = token?.name || actor?.name || afflictionData.name;
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #c45500;">
         <h3><i class="fas fa-biohazard"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MULTIPLE_EXPOSURE_HEADING', { afflictionName: afflictionData.name })}</h3>
-        <p><strong>${token.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EXPOSED_AGAIN', { afflictionName: afflictionData.name })}</p>
+        <p><strong>${entityName}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EXPOSED_AGAIN', { afflictionName: afflictionData.name })}</p>
         <p>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.STAGE_INCREASED_BY', { stageIncrease: multipleExposure.stageIncrease, newStage })}</p>
         ${multipleExposure.rawText ? `<p><em>${multipleExposure.rawText}</em></p>` : ''}
       </div>
@@ -439,13 +470,13 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async postOnsetEffectIntervalTrigger(token, affliction) {
-    const actor = token.actor;
+    const actor = token?.actor;
     const interval = affliction.onsetEffectInterval;
     const intervalText = interval ? `${interval.value} ${interval.unit}(s)` : '';
 
@@ -480,15 +511,15 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
-          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
+        <button class="affliction-target-token" data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor?.name || 'Unknown' })}
         </button>`;
     }
 
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #6B3FA0;">
         <h3><i class="fas fa-hourglass-half"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_HEADING', { afflictionName: affliction.name })}</h3>
-        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_NOTE', { duration: intervalText })}</p>
+        <p><strong>${actor?.name || 'Unknown'}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_NOTE', { duration: intervalText })}</p>
         ${effectsSummary}
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.ONSET_EFFECT_INTERVAL_NO_SAVE')}</em></p>
         ${damageSection}
@@ -497,13 +528,13 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
 
   static async postEffectIntervalTrigger(token, affliction) {
-    const actor = token.actor;
+    const actor = token?.actor;
     const stage = affliction.stages?.[affliction.currentStage - 1];
     const effectInterval = stage?.effectInterval;
     const effectIntervalText = effectInterval
@@ -552,15 +583,15 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
-          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
+        <button class="affliction-target-token" data-token-id="${token?.id || ''}"${(token?.document?.actorLink && token?.actor) || (!token && actor) ? ` data-actor-id="${actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+          <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor?.name || 'Unknown' })}
         </button>`;
     }
 
     const content = `
       <div class="pf2e-afflictioner-save-request" style="border-color: #6B3FA0;">
         <h3><i class="fas fa-clock"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_HEADING', { afflictionName: affliction.name })}</h3>
-        <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_NOTE', { duration: effectIntervalText })}</p>
+        <p><strong>${actor?.name || 'Unknown'}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_NOTE', { duration: effectIntervalText })}</p>
         <p>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CURRENT_STAGE_LABEL')} ${affliction.currentStage}</p>
         ${effectsSummary}
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.EFFECT_INTERVAL_NO_SAVE')}</em></p>
@@ -570,7 +601,7 @@ export class AfflictionChatService {
 
     await ChatMessage.create({
       content,
-      speaker: ChatMessage.getSpeaker({ token: token }),
+      speaker: token ? ChatMessage.getSpeaker({ token }) : ChatMessage.getSpeaker({ actor }),
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     });
   }
