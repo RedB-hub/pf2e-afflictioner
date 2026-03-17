@@ -151,7 +151,7 @@ export class CounteractService {
           ${showDCToPlayers ? `<p><strong>${skillDisplay} Check DC:</strong> ${dc}</p>` : ''}
           <hr>
           <button class="affliction-roll-counteract"
-                  data-token-id="${token.id}"
+                  data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                   data-affliction-id="${affliction.id}"
                   data-counteract-rank="${counteractRank}"
                   data-affliction-rank="${afflictionRank}"

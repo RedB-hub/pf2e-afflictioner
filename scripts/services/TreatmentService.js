@@ -17,7 +17,7 @@ export class TreatmentService {
         <p><strong>${actor.name}</strong> needs treatment for <strong>${affliction.name}</strong></p>
         <p><em>Crit Success +4, Success +2, Failure 0, Crit Failure -2 to next save</em></p>
         <hr>
-        <button class="affliction-roll-treatment" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+        <button class="affliction-roll-treatment" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
           <i class="fas fa-dice-d20"></i> Roll Medicine (Treat ${affliction.type === 'poison' ? 'Poison' : 'Disease'})
         </button>
       </div>

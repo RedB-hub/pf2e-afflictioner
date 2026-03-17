@@ -24,7 +24,7 @@ export class AfflictionChatService {
           <p><em style="font-size: 0.9em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_PREFIX')} ${afflictionData.onset ? game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_ONSET') : game.i18n.localize('PF2E_AFFLICTIONER.CHAT.GM_REASON_NO_EFFECTS')}</em></p>
           <hr>
           <button class="affliction-roll-initial-save"
-                  data-token-id="${token.id}"
+                  data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                   data-affliction-id="${afflictionId}"
                   data-dc="${afflictionData.dc}"
                   data-blind-roll="true"
@@ -190,7 +190,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>
       </div>
@@ -212,7 +212,7 @@ export class AfflictionChatService {
           <p><strong>${actor.name}</strong> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.NEEDS_FORTITUDE_SAVE', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
           <hr>
           <button class="affliction-roll-initial-save"
-                  data-token-id="${token.id}"
+                  data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                   data-affliction-id="${afflictionId}"
                   data-dc="${afflictionData.dc}"
                   style="width: 100%; padding: 8px; margin-top: 10px;">
@@ -229,7 +229,7 @@ export class AfflictionChatService {
         <p>${game.i18n.format('PF2E_AFFLICTIONER.CHAT.MAKE_FORTITUDE_RESIST', { saveType: saveTypeLabel })}${showDCToPlayers ? ` ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.FORTITUDE_DC_PARENS', { dc: afflictionData.dc })}` : ''}</p>
         <hr>
         <button class="affliction-roll-initial-save"
-                data-token-id="${token.id}"
+                data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                 data-affliction-id="${afflictionId}"
                 data-dc="${afflictionData.dc}"
                 style="width: 100%; padding: 8px; margin-top: 10px;">
@@ -249,7 +249,7 @@ export class AfflictionChatService {
           ${showDCToPlayers ? `<p><strong>DC:</strong> ${affliction.dc}</p>` : ''}
           ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
           <hr>
-          <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+          <button class="affliction-roll-save" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
             <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
           </button>
         </div>
@@ -265,7 +265,7 @@ export class AfflictionChatService {
         ${affliction.isVirulent ? `<p><em style="color: #c45500; font-size: 0.75em;">${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.VIRULENT_NOTE')}</em></p>` : ''}
         ${affliction.treatmentBonus ? `<p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.TREATMENT_BONUS_ACTIVE')} (${affliction.treatmentBonus > 0 ? '+' : ''}${affliction.treatmentBonus})</em></p>` : ''}
         <hr>
-        <button class="affliction-roll-save" data-token-id="${token.id}" data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
+        <button class="affliction-roll-save" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} data-affliction-id="${affliction.id}" data-dc="${affliction.dc}" style="width: 100%; padding: 8px; margin-top: 10px;">
           <i class="fas fa-dice-d20"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.ROLL_FORTITUDE_SAVE', { saveType: saveTypeLabel })}
         </button>
       </div>
@@ -285,7 +285,7 @@ export class AfflictionChatService {
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.STAGE_WHEN_EXPIRED')} ${affliction.currentStage}</em></p>
         <div class="pf2e-afflictioner-button-group" style="margin-top: 10px;">
           <button class="pf2e-afflictioner-btn pf2e-afflictioner-remove-expired-btn"
-                  data-token-id="${token.id}"
+                  data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                   data-affliction-id="${affliction.id}"
                   style="background: #dc3545;">
             <i class="fas fa-trash-alt"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.REMOVE_CONDITIONS_PERSIST')}
@@ -315,7 +315,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLink}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>
       </div>
@@ -395,7 +395,7 @@ export class AfflictionChatService {
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.LETHAL_NOTE')}</em></p>
         <hr>
         <button class="pf2e-afflictioner-btn pf2e-afflictioner-confirm-kill-btn"
-                data-token-id="${token.id}"
+                data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''}
                 data-affliction-id="${affliction.id}"
                 style="width: 100%; padding: 8px; margin-top: 10px; background: #8b0000;">
           <i class="fas fa-skull"></i> ${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CONFIRM_KILL')}
@@ -480,7 +480,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>`;
     }
@@ -552,7 +552,7 @@ export class AfflictionChatService {
         <p><strong>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.DAMAGE_LABEL')}</strong> ${damageLinks}</p>
         <p><em>${game.i18n.localize('PF2E_AFFLICTIONER.CHAT.CLICK_DAMAGE_LINK')}</em></p>
         <hr>
-        <button class="affliction-target-token" data-token-id="${token.id}" style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
+        <button class="affliction-target-token" data-token-id="${token.id}"${token.document?.actorLink && token.actor ? ` data-actor-id="${token.actor.id}"` : ''} style="width: 100%; padding: 8px; margin-top: 10px; background: #2a4a7c; border: 2px solid #3a5a8c; color: white; border-radius: 6px; cursor: pointer;">
           <i class="fas fa-crosshairs"></i> ${game.i18n.format('PF2E_AFFLICTIONER.CHAT.TARGET_ACTOR', { actorName: actor.name })}
         </button>`;
     }

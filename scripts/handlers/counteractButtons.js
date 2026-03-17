@@ -9,12 +9,16 @@ export function registerCounteractButtonHandlers(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const counteractRank = parseInt(btn.dataset.counteractRank);
       const afflictionRank = parseInt(btn.dataset.afflictionRank);
       const degree = btn.dataset.degree;
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
 
       const affliction = AfflictionStore.getAffliction(token, afflictionId);
@@ -38,13 +42,17 @@ export function registerCounteractButtonHandlers(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const counteractRank = parseInt(btn.dataset.counteractRank);
       const afflictionRank = parseInt(btn.dataset.afflictionRank);
       const dc = parseInt(btn.dataset.dc);
       const skill = btn.dataset.skill || 'medicine';
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
@@ -204,7 +212,13 @@ export async function injectCounteractConfirmButton(message, root) {
   applyBtn.dataset.degree = degree;
 
   applyBtn.addEventListener('click', async () => {
-    const token = canvas.tokens.get(tokenId);
+    let token = tokenId ? canvas.tokens.get(tokenId) : null;
+    if (!token) {
+      // Try actor-based fallback: find the token via its actor from the scene
+      const sceneToken = canvas.scene?.tokens?.find(t => t.id === tokenId);
+      const actor = sceneToken?.actorLink ? game.actors.get(sceneToken.actorId) : null;
+      if (actor) token = AfflictionStore.findTokenForActor(actor);
+    }
     if (!token) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
     const affliction = AfflictionStore.getAffliction(token, afflictionId);
     if (!affliction) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND')); return; }

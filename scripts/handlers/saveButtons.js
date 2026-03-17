@@ -12,10 +12,14 @@ function registerInitialSaveButtons(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const dc = parseInt(btn.dataset.dc);
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
@@ -116,10 +120,14 @@ function registerStageSaveButtons(root) {
     button.addEventListener('click', async (event) => {
       const btn = event.currentTarget;
       const tokenId = btn.dataset.tokenId;
+      const actorId = btn.dataset.actorId;
       const afflictionId = btn.dataset.afflictionId;
       const dc = parseInt(btn.dataset.dc);
 
-      const token = canvas.tokens.get(tokenId);
+      let token = tokenId ? canvas.tokens.get(tokenId) : null;
+      if (!token && actorId) {
+        token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
+      }
       if (!token) {
         ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
         return;
