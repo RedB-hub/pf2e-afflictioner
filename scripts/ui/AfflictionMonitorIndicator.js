@@ -169,9 +169,9 @@ class AfflictionMonitorIndicator {
       }
     } catch { }
 
+    this._boundMouseMove = (ev) => this.#onMouseMove(ev);
+    this._boundMouseUp = (ev) => this.#onMouseUp(ev);
     el.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
-    document.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
-    document.addEventListener('mouseup', (ev) => this.#onMouseUp(ev));
 
     el.addEventListener('mouseenter', () => this.#showTooltip());
     el.addEventListener('mouseleave', () => this.#scheduleHideTooltip());
@@ -197,6 +197,8 @@ class AfflictionMonitorIndicator {
     this._drag.offset.x = event.clientX - rect.left;
     this._drag.offset.y = event.clientY - rect.top;
     this._el.classList.add('dragging');
+    document.addEventListener('mousemove', this._boundMouseMove);
+    document.addEventListener('mouseup', this._boundMouseUp);
   }
 
   #onMouseMove(event) {
@@ -214,6 +216,8 @@ class AfflictionMonitorIndicator {
   }
 
   #onMouseUp() {
+    document.removeEventListener('mousemove', this._boundMouseMove);
+    document.removeEventListener('mouseup', this._boundMouseUp);
     if (!this._drag.active) return;
     this._drag.active = false;
     this._el.classList.remove('dragging');
