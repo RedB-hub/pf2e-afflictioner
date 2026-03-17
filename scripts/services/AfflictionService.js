@@ -253,8 +253,8 @@ export class AfflictionService {
     await AfflictionChatService.promptStageSave(token, affliction, actor);
   }
 
-  static async promptDamage(token, affliction) {
-    await AfflictionChatService.promptDamage(token, affliction);
+  static async promptDamage(token, affliction, actor = null) {
+    await AfflictionChatService.promptDamage(token, affliction, actor);
   }
 
   static async handleStageSave(token, affliction, saveTotal, dc, isManual = false, dieValue = null, actor = null) {
@@ -419,9 +419,11 @@ export class AfflictionService {
         await this.applyStageEffects(token, updatedAffliction, newStageData);
 
         if (newStageData.damage && newStageData.damage.length > 0) {
-          await this.promptDamage(token, updatedAffliction);
+          await this.promptDamage(token, updatedAffliction, actor);
         }
       }
+    } else if (actor && newStageData?.damage?.length > 0) {
+      await this.promptDamage(null, updatedAffliction, actor);
     }
 
     if (showVirulentMessage) {

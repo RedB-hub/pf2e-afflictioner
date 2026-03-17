@@ -3,8 +3,8 @@ import * as AfflictionStore from '../stores/AfflictionStore.js';
 import { DEGREE_OF_SUCCESS } from '../constants.js';
 
 export class TreatmentService {
-  static async promptTreatment(token, affliction) {
-    const actor = token?.actor;
+  static async promptTreatment(token, affliction, actor = null) {
+    actor = actor || token?.actor;
     if (!actor) return;
 
     if (affliction.treatedThisStage) {

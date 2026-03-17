@@ -744,82 +744,99 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async progressStage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
+    const entityName = token?.name || actor?.name || 'Unknown';
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-      if (affliction.currentStage >= affliction.stages.length) {
-        ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', {
-          tokenName: token.name,
-          afflictionName: affliction.name
-        }));
-        return;
-      }
-
-      await AfflictionService.handleStageSave(token, affliction, 10, 15, true);
-      this.render({ force: true });
-    } else {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    if (affliction.currentStage >= affliction.stages.length) {
+      ui.notifications.warn(game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.MAX_STAGE', {
+        tokenName: entityName,
+        afflictionName: affliction.name
+      }));
+      return;
+    }
+
+    await AfflictionService.handleStageSave(token, affliction, 10, 15, true, null, actor);
+    this.render({ force: true });
   }
 
   static async regressStage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
+    const entityName = token?.name || actor?.name || 'Unknown';
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-      if (affliction.currentStage <= 1) {
-        ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.MANAGER.AT_STAGE_ONE', { tokenName: token.name, afflictionName: affliction.name }));
-        return;
-      }
-
-      await AfflictionService.handleStageSave(token, affliction, 15, 10, true);
-      this.render({ force: true });
-    } else {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    if (affliction.currentStage <= 1) {
+      ui.notifications.info(game.i18n.format('PF2E_AFFLICTIONER.MANAGER.AT_STAGE_ONE', { tokenName: entityName, afflictionName: affliction.name }));
+      return;
+    }
+
+    await AfflictionService.handleStageSave(token, affliction, 15, 10, true, null, actor);
+    this.render({ force: true });
   }
 
   static async rollSave(_event, button) {
     const afflictionId = button.dataset.afflictionId;
     const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await AfflictionService.promptSave(token, affliction);
-    } else if (actor) {
-      const affliction = AfflictionStore.getAfflictionForActor(actor, afflictionId);
-      await AfflictionService.promptSave(null, affliction, actor);
-    } else {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await AfflictionService.promptSave(token, affliction, actor);
   }
 
   static async rollDamage(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await AfflictionService.promptDamage(token, affliction);
-    } else {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await AfflictionService.promptDamage(token, affliction, actor);
   }
 
   static async treatAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (token) {
-      const affliction = AfflictionStore.getAffliction(token, afflictionId);
-      await TreatmentService.promptTreatment(token, affliction);
-    } else {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
+
+    if (!affliction) {
+      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
+      return;
     }
+
+    await TreatmentService.promptTreatment(token, affliction, actor);
   }
 
   static async openPoisonItem(_event, button) {
@@ -921,14 +938,12 @@ export class AfflictionManager extends foundry.applications.api.HandlebarsApplic
 
   static async counteractAffliction(_event, button) {
     const afflictionId = button.dataset.afflictionId;
-    const { token } = AfflictionManager._resolveTarget(button);
+    const { token, actor } = AfflictionManager._resolveTarget(button);
 
-    if (!token) {
-      ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
-      return;
-    }
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : actor ? AfflictionStore.getAfflictionForActor(actor, afflictionId) : null;
 
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
     if (!affliction) {
       ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND'));
       return;

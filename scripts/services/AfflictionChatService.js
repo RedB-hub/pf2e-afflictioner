@@ -153,8 +153,8 @@ export class AfflictionChatService {
     }
   }
 
-  static async promptDamage(token, affliction) {
-    const actor = token?.actor;
+  static async promptDamage(token, affliction, actor = null) {
+    actor = actor || token?.actor;
     if (!actor) return;
 
     const currentStageIndex = affliction.currentStage - 1;
