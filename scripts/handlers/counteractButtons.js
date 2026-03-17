@@ -120,7 +120,7 @@ export function registerCounteractButtonHandlers(root) {
           await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree);
         } else {
           const { SocketService } = await import('../services/SocketService.js');
-          await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree);
+          await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId);
         }
         btn.disabled = true;
         return;
@@ -215,21 +215,22 @@ export async function injectCounteractConfirmButton(message, root) {
 
   applyBtn.addEventListener('click', async () => {
     let token = tokenId ? canvas.tokens.get(tokenId) : null;
-    if (!token) {
-      // Try actor-based fallback: find the token via its actor from the scene
-      const sceneToken = canvas.scene?.tokens?.find(t => t.id === tokenId);
-      const actor = sceneToken?.actorLink ? game.actors.get(sceneToken.actorId) : null;
-      if (actor) token = AfflictionStore.findTokenForActor(actor);
+    if (!token && actorId) {
+      token = AfflictionStore.findTokenForActor(game.actors.get(actorId));
     }
-    if (!token) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
-    const affliction = AfflictionStore.getAffliction(token, afflictionId);
+    const actor = token?.actor || (actorId ? game.actors.get(actorId) : null);
+    if (!token && !actor) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND')); return; }
+
+    const affliction = token
+      ? AfflictionStore.getAffliction(token, afflictionId)
+      : AfflictionStore.getAfflictionForActor(actor, afflictionId);
     if (!affliction) { ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.AFFLICTION_NOT_FOUND')); return; }
 
     if (game.user.isGM) {
-      await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree);
+      await CounteractService.handleCounteractResult(token, affliction, counteractRank, afflictionRank, degree, actor);
     } else {
       const { SocketService } = await import('../services/SocketService.js');
-      await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree);
+      await SocketService.requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId);
     }
     applyBtn.disabled = true;
     applyBtn.textContent = `✓ ${game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLIED')}`;

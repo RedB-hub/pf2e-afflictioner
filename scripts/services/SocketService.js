@@ -191,11 +191,11 @@ export class SocketService {
     }
   }
 
-  static async requestHandleTreatment(tokenId, afflictionId, total, dc) {
+  static async requestHandleTreatment(tokenId, afflictionId, total, dc, actorId = null) {
     if (!this.socket) return false;
 
     try {
-      await this.socket.executeAsGM('gmHandleTreatment', tokenId, afflictionId, total, dc);
+      await this.socket.executeAsGM('gmHandleTreatment', tokenId, afflictionId, total, dc, actorId);
       return true;
     } catch (error) {
       console.error('PF2e Afflictioner | Error requesting treatment handling:', error);
@@ -220,11 +220,11 @@ export class SocketService {
     await TreatmentService.handleTreatmentResult(token, affliction, total, dc, actor);
   }
 
-  static async requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree) {
+  static async requestHandleCounteract(tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId = null) {
     if (!this.socket) return false;
 
     try {
-      await this.socket.executeAsGM('gmHandleCounteract', tokenId, afflictionId, counteractRank, afflictionRank, degree);
+      await this.socket.executeAsGM('gmHandleCounteract', tokenId, afflictionId, counteractRank, afflictionRank, degree, actorId);
       return true;
     } catch (error) {
       console.error('PF2e Afflictioner | Error requesting counteract handling:', error);
