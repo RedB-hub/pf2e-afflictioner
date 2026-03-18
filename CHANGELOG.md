@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-03-18
+
+### Added
+
+- **Starfinder 2e (SF2e) system support**: The module now works with both PF2e and SF2e systems. Since both systems share the same codebase, all features (affliction tracking, saves, counteract, treatment) work identically. Message flag namespaces are detected automatically at runtime.
+
 ## [1.7.0] - 2026-03-17
 
 ### Added

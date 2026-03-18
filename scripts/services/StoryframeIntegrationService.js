@@ -1,4 +1,5 @@
 import { MODULE_ID } from '../constants.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export class StoryframeIntegrationService {
   constructor() {
@@ -105,7 +106,7 @@ export class StoryframeIntegrationService {
     const recent = game.messages.contents.slice(-20);
     for (let i = recent.length - 1; i >= 0; i--) {
       const msg = recent[i];
-      if (msg.flags?.pf2e?.context?.type === 'saving-throw' &&
+      if (getSystemFlags(msg)?.context?.type === 'saving-throw' &&
           msg.actor?.id === actorId &&
           msg.rolls?.[0]?.total === total) {
         return msg.id;

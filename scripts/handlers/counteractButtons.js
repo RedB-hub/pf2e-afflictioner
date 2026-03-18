@@ -2,6 +2,7 @@ import * as AfflictionStore from '../stores/AfflictionStore.js';
 import { AfflictionService } from '../services/AfflictionService.js';
 import { CounteractService } from '../services/CounteractService.js';
 import { shouldSkipAffliction } from '../utils.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export function registerCounteractButtonHandlers(root) {
   const applyButtons = root.querySelectorAll('.affliction-apply-counteract');
@@ -255,10 +256,10 @@ export async function addCounteractAfflictionSelection(message, htmlElement) {
 
   if (htmlElement.dataset.counteractSelectionEnabled === 'true') return;
 
-  const originType = message.flags?.pf2e?.origin?.type;
+  const originType = getSystemFlags(message)?.origin?.type;
   if (originType !== 'spell') return;
 
-  const itemUuid = message.flags?.pf2e?.origin?.uuid;
+  const itemUuid = getSystemFlags(message)?.origin?.uuid;
   if (!itemUuid) return;
 
   let item;
@@ -277,7 +278,7 @@ export async function addCounteractAfflictionSelection(message, htmlElement) {
 
   if (!isCounteractSpell) return;
 
-  const spellRank = message.flags?.pf2e?.origin?.castRank ||
+  const spellRank = getSystemFlags(message)?.origin?.castRank ||
     item.system?.location?.heightenedLevel ||
     item.system?.level?.value || 1;
 
@@ -385,7 +386,7 @@ export async function addCounteractAfflictionSelection(message, htmlElement) {
             return;
           }
 
-          const casterId = message.flags?.pf2e?.context?.actor || message.speaker?.actor;
+          const casterId = getSystemFlags(message)?.context?.actor || message.speaker?.actor;
           const casterActor = casterId ? game.actors.get(casterId) : null;
 
           const spellEntryId = item.spellcasting?.id || item.system?.location?.value || null;

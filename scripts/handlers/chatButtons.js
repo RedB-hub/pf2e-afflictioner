@@ -3,6 +3,7 @@ import { registerAfflictionButtonHandlers } from './afflictionButtons.js';
 import { registerTreatmentButtonHandlers, addTreatmentAfflictionSelection } from './treatmentButtons.js';
 import { registerCounteractButtonHandlers, addCounteractAfflictionSelection, injectCounteractConfirmButton } from './counteractButtons.js';
 import { VishkanyaService } from '../services/VishkanyaService.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export function onRenderChatMessage(message, html) {
   const root = html?.jquery ? html[0] : html;
@@ -77,7 +78,7 @@ async function injectCoatWeaponButton(message, root) {
   // Prevent double-injection on re-renders
   if (root.dataset.coatWeaponInjected === 'true') return;
 
-  const itemUuid = message.flags?.pf2e?.origin?.uuid;
+  const itemUuid = getSystemFlags(message)?.origin?.uuid;
   if (!itemUuid) return;
 
   let item;

@@ -2,6 +2,7 @@ import { MODULE_ID, DEGREE_OF_SUCCESS } from '../constants.js';
 import { VisualService } from './VisualService.js';
 import { AfflictionService } from './AfflictionService.js';
 import * as AfflictionStore from '../stores/AfflictionStore.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export class SocketService {
   /**
@@ -341,8 +342,9 @@ export class SocketService {
       return total;
     }
 
-    if (message.flags?.pf2e?.context?.rollTotal !== undefined) {
-      total = message.flags.pf2e.context.rollTotal;
+    const sysFlags = getSystemFlags(message);
+    if (sysFlags?.context?.rollTotal !== undefined) {
+      total = sysFlags.context.rollTotal;
       return total;
     }
 
@@ -358,7 +360,7 @@ export class SocketService {
       messageId,
       hasRolls: !!message.rolls?.length,
       rolls: message.rolls,
-      flags: message.flags?.pf2e,
+      flags: getSystemFlags(message),
       contentPreview: message.content?.substring(0, 300)
     });
     return null;

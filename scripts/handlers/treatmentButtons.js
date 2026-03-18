@@ -1,4 +1,5 @@
 import * as AfflictionStore from '../stores/AfflictionStore.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export function registerTreatmentButtonHandlers(root) {
   const rollTreatmentButtons = root.querySelectorAll('.affliction-roll-treatment');
@@ -52,7 +53,7 @@ export async function addTreatmentAfflictionSelection(message, htmlElement) {
 
   if (htmlElement.dataset.treatmentSelectionEnabled === 'true') return;
 
-  const flags = message.flags?.pf2e;
+  const flags = getSystemFlags(message);
   if (!flags?.context?.type || flags.context.type !== 'skill-check') return;
 
   const options = flags.context?.options || [];

@@ -3,6 +3,7 @@ import { AfflictionService } from '../services/AfflictionService.js';
 import { AfflictionParser } from '../services/AfflictionParser.js';
 import { shouldSkipAffliction } from '../utils.js';
 import { FeatsService } from '../services/FeatsService.js';
+import { getSystemFlags } from '../systemCompat.js';
 import { DEGREE_OF_SUCCESS } from '../constants.js';
 
 export function registerAfflictionButtonHandlers(root, message) {
@@ -118,7 +119,7 @@ async function addApplyAfflictionButton(message, htmlElement) {
 
   if (htmlElement.dataset.applyAfflictionEnabled === 'true') return;
 
-  const notes = message.flags?.pf2e?.context?.notes || [];
+  const notes = getSystemFlags(message)?.context?.notes || [];
 
   let afflictionNote = notes.find(note => {
     const text = note.text || '';
@@ -144,7 +145,7 @@ async function addApplyAfflictionButton(message, htmlElement) {
 
   if (!afflictionNote) return;
 
-  const target = message.flags?.pf2e?.context?.target;
+  const target = getSystemFlags(message)?.context?.target;
   if (!target?.token) return;
 
   htmlElement.dataset.applyAfflictionEnabled = 'true';
@@ -180,8 +181,8 @@ async function addApplyAfflictionButton(message, htmlElement) {
   }
 
   // Blowgun Poisoner: degrade the target's initial save if the attacker critically hit with a blowgun
-  const attackOutcome = message.flags?.pf2e?.context?.outcome;
-  const attackOptions = message.flags?.pf2e?.context?.options ?? [];
+  const attackOutcome = getSystemFlags(message)?.context?.outcome;
+  const attackOptions = getSystemFlags(message)?.context?.options ?? [];
   const isBlowgunAttack = attackOptions.some(opt => typeof opt === 'string' && opt.includes('blowgun'));
   if (
     attackOutcome === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS &&
@@ -243,13 +244,13 @@ async function addApplyAfflictionToSelectedButton(message, htmlElement) {
     return;
   }
 
-  const itemUuid = message.flags?.pf2e?.origin?.uuid;
+  const itemUuid = getSystemFlags(message)?.origin?.uuid;
 
   if (!itemUuid) {
     return;
   }
 
-  if (message.flags?.pf2e?.context?.target?.token) {
+  if (getSystemFlags(message)?.context?.target?.token) {
     return;
   }
 
@@ -262,7 +263,7 @@ async function addApplyAfflictionToSelectedButton(message, htmlElement) {
 
   // Fallback to embedded spell data from casting flags (e.g. consumed scrolls/wands)
   if (!item) {
-    const embedded = message.flags?.pf2e?.casting?.embeddedSpell;
+    const embedded = getSystemFlags(message)?.casting?.embeddedSpell;
     if (embedded?.system) {
       item = embedded;
     }
@@ -411,7 +412,7 @@ function buildSyntheticItemFromMessage(message) {
   const content = message.content;
   if (!content) return null;
 
-  const rollOptions = message.flags?.pf2e?.origin?.rollOptions || [];
+  const rollOptions = getSystemFlags(message)?.origin?.rollOptions || [];
   const traits = rollOptions
     .filter(o => o.startsWith('origin:item:trait:'))
     .map(o => o.replace('origin:item:trait:', ''));
@@ -425,7 +426,7 @@ function buildSyntheticItemFromMessage(message) {
 
   return {
     name: nameMatch ? nameMatch[1].trim() : 'Unknown',
-    uuid: message.flags?.pf2e?.origin?.uuid,
+    uuid: getSystemFlags(message)?.origin?.uuid,
     system: {
       traits: { value: traits },
       description: { value: content },

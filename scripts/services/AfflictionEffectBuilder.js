@@ -1,6 +1,7 @@
 import * as AfflictionStore from '../stores/AfflictionStore.js';
 import { PERSISTENT_CONDITIONS } from '../constants.js';
 import { getParserLocale } from '../locales/parser-locales.js';
+import { getConditionPack, getConditionUuidFromEntry } from '../systemCompat.js';
 
 export class AfflictionEffectBuilder {
   static async createOrUpdateEffect(token, actor, affliction, stage) {
@@ -382,9 +383,9 @@ export class AfflictionEffectBuilder {
   static async getConditionUuid(conditionName) {
     const slug = conditionName.toLowerCase();
 
-    const pack = game.packs.get('pf2e.conditionitems');
+    const pack = getConditionPack();
     if (!pack) {
-      console.warn(`PF2e Afflictioner | Could not find pf2e.conditionitems compendium`);
+      console.warn('PF2e Afflictioner | Could not find conditions compendium');
       return null;
     }
 
@@ -399,6 +400,6 @@ export class AfflictionEffectBuilder {
       return null;
     }
 
-    return `Compendium.pf2e.conditionitems.Item.${entry._id}`;
+    return getConditionUuidFromEntry(pack, entry._id);
   }
 }

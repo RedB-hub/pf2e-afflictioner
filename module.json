@@ -1,7 +1,7 @@
 {
   "id": "pf2e-afflictioner",
   "title": "PF2e Afflictioner",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
@@ -24,6 +24,14 @@
         "compatibility": {
           "minimum": "7.0.0",
           "verified": "7.10.1"
+        }
+      },
+      {
+        "id": "sf2e",
+        "type": "system",
+        "compatibility": {
+            "minimum": "0.0.8",
+            "verified": "0.0.8"
         }
       }
     ],

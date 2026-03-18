@@ -3,6 +3,7 @@ import { AfflictionParser } from '../services/AfflictionParser.js';
 import * as AfflictionStore from '../stores/AfflictionStore.js';
 import * as WeaponCoatingStore from '../stores/WeaponCoatingStore.js';
 import { DEGREE_OF_SUCCESS, MODULE_ID } from '../constants.js';
+import { getSystemFlags } from '../systemCompat.js';
 import { FeatsService } from '../services/FeatsService.js';
 
 export async function onCreateChatMessage(message, options, userId) {
@@ -10,7 +11,7 @@ export async function onCreateChatMessage(message, options, userId) {
 
   if (!game.settings.get('pf2e-afflictioner', 'autoDetectAfflictions')) return;
 
-  const flags = message.flags?.pf2e;
+  const flags = getSystemFlags(message);
   if (!flags?.context?.type) return;
 
   if (flags.context.type === 'attack-roll') {

@@ -1,6 +1,7 @@
 import { MODULE_ID } from './constants.js';
 import { registerSettings } from './settings.js';
 import { registerAfflictionHooks } from './hooks/registration.js';
+import { detectSystem } from './systemCompat.js';
 
 const MIGRATION_VERSION = 1;
 
@@ -48,6 +49,7 @@ async function migrateLinkedTokenAfflictions() {
 }
 
 Hooks.once('init', async () => {
+  detectSystem();
   registerSettings();
   registerAfflictionHooks();
 

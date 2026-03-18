@@ -1,4 +1,5 @@
 import * as AfflictionStore from '../stores/AfflictionStore.js';
+import { getSystemFlags } from '../systemCompat.js';
 
 export function registerSaveButtonHandlers(root) {
   registerInitialSaveButtons(root);
@@ -59,7 +60,7 @@ function registerInitialSaveButtons(root) {
 
       let rollMessageId = null;
       Hooks.once('createChatMessage', (message) => {
-        if (message.actor?.id === actor.id && message.flags?.pf2e?.context?.type === 'saving-throw') {
+        if (message.actor?.id === actor.id && getSystemFlags(message)?.context?.type === 'saving-throw') {
           rollMessageId = message.id;
         }
       });
@@ -169,7 +170,7 @@ function registerStageSaveButtons(root) {
 
       let rollMessageId = null;
       Hooks.once('createChatMessage', (message) => {
-        if (message.actor?.id === actor.id && message.flags?.pf2e?.context?.type === 'saving-throw') {
+        if (message.actor?.id === actor.id && getSystemFlags(message)?.context?.type === 'saving-throw') {
           rollMessageId = message.id;
         }
       });

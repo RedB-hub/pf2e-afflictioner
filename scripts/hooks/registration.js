@@ -10,10 +10,10 @@ import { onGetSceneControlButtons, onRenderSceneControls, onUpdateToken, onContr
 
 export function registerAfflictionHooks() {
   Hooks.on('pf2e.rollDamage', onDamageRoll);
-  Hooks.on('createChatMessage', onCreateChatMessage);
-  Hooks.on('updateCombat', onCombatUpdate);
   Hooks.on('pf2e.startTurn', onPf2eStartTurn);
   Hooks.on('pf2e.endTurn', onPf2eEndTurn);
+  Hooks.on('createChatMessage', onCreateChatMessage);
+  Hooks.on('updateCombat', onCombatUpdate);
   Hooks.on('deleteCombat', onDeleteCombat);
   Hooks.on('deleteItem', onDeleteItem);
   Hooks.on('updateWorldTime', onWorldTimeUpdate);
