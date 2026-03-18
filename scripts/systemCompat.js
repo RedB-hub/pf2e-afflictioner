@@ -1,35 +1,28 @@
 /**
  * System compatibility layer for PF2e and SF2e support.
  * Both systems share the same codebase, so hooks (pf2e.*) and game.pf2e API are identical.
- * Differences: message flags (pf2e vs sf2e) and condition compendium pack names
- * (pf2e.conditionitems vs sf2e.conditions).
+ * Differences: message/document flags use game.system.id as namespace (pf2e vs sf2e),
+ * and condition compendium packs have different names (pf2e.conditionitems vs sf2e.conditions).
  */
 
-let _namespace = null;
+let _systemId = null;
 
 /**
  * Call once during the 'init' hook to capture the active system ID.
+ * FoundryVTT namespaces flags by game.system.id, so this is the source of truth.
  */
 export function detectSystem() {
-  _namespace = null;
+  _systemId = game.system.id;
 }
 
-/**
- * Returns the flag namespace used by the active system ('pf2e' or 'sf2e').
- * Lazy-detected on first call since game.pf2e may not exist until 'ready'.
- */
-export function getSystemNamespace() {
-  if (_namespace) return _namespace;
-  if (game.pf2e) _namespace = 'pf2e';
-  else if (game.sf2e) _namespace = 'sf2e';
-  else _namespace = game.system?.id || 'pf2e';
-  return _namespace;
+/** Returns the system ID ('pf2e' or 'sf2e'), used for flag namespacing. */
+export function getSystemId() {
+  return _systemId || game.system?.id || 'pf2e';
 }
 
 /** Returns system-specific flags from a message or document. */
 export function getSystemFlags(obj) {
-  const ns = getSystemNamespace();
-  return obj?.flags?.[ns];
+  return obj?.flags?.[getSystemId()];
 }
 
 /** Returns the conditions compendium pack (pf2e.conditionitems or sf2e.conditions). */
