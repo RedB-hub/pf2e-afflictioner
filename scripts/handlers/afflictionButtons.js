@@ -209,16 +209,23 @@ async function addApplyAfflictionButton(message, htmlElement) {
 
   button.addEventListener('click', async () => {
     try {
-      const targetTokenDoc = await fromUuid(target.token);
-      if (!targetTokenDoc) {
-        ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
-        return;
-      }
-
-      const token = targetTokenDoc.object;
-      if (!token) {
-        ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
-        return;
+      // If the user has exactly one token targeted at click time, use it — this allows
+      // redirecting the affliction to a Guardian who used Intercept Attack.
+      const currentTargets = Array.from(game.user.targets);
+      let token;
+      if (currentTargets.length === 1) {
+        token = currentTargets[0];
+      } else {
+        const targetTokenDoc = await fromUuid(target.token);
+        if (!targetTokenDoc) {
+          ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+          return;
+        }
+        token = targetTokenDoc.object;
+        if (!token) {
+          ui.notifications.error(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+          return;
+        }
       }
 
       await AfflictionService.promptInitialSave(token, afflictionData);

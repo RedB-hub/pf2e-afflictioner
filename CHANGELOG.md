@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-03-19
+
+### Fixed
+
+- **Apply Affliction target override**: The "Apply Affliction to Target" button on attack chat cards now respects the currently targeted token at click time. If exactly one token is targeted when the button is clicked, that token receives the affliction instead of the original attack target — allowing GMs to redirect afflictions without manually dragging via the HUD.
+
 ## [1.8.0] - 2026-03-18
 
 ### Added
