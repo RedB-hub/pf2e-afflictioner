@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-25
+
+### Added
+
+- **Referenced affliction detection**: When an affliction stage references another affliction, curse, or effect by name (e.g., "the target is exposed to the curse of flawed history"), the module now automatically detects the reference, finds the item on the attacking creature, and prompts a separate save for the target. Supports "exposed to", "contracts", and "afflicted with" patterns in EN, RU, and ZH.
+- **Effect-only item support**: Curse/disease/poison items without stages (just an "Effect" section) can now be parsed and applied as PF2e effects with rule elements. Penalties like "–2 status penalty to Recall Knowledge checks" are automatically converted to FlatModifier rules.
+- **Penalty parsing**: `extractBonuses` now handles status/circumstance/item penalty patterns (en-dash, em-dash, hyphen) in addition to bonuses. Added Recall Knowledge support to selector and predicate parsing.
+- **Origin actor tracking**: Affliction data now stores `originActorUuid` so referenced items can be looked up on the attacking creature when stage effects are applied.
+
+### Fixed
+
+- **Stage condition parsing false positive**: `detectManualHandling` used naive substring matching (`includes('or')`), causing words like "history" to falsely trigger manual handling and skip condition application. Now uses word-boundary regex (`\bor\b`) with HTML/enrichment stripping.
+
 ## [1.8.1] - 2026-03-19
 
 ### Fixed

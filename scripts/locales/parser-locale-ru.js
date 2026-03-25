@@ -154,6 +154,19 @@ export const RU_PARSER_LOCALE = {
     { regex: /[\u2013\u2014-](\d+)[\u2013\u2014-]foot\s+status\s+penalty\s+to\s+(?:all\s+)?[Ss]peed/g, valueGroup: 1 },
   ],
 
+  // ── Effect section label ──────────────────────────────────────────────────
+  effectLabelRe: '(?:Эффект|Effect)',
+
+  // ── Referenced affliction patterns ──────────────────────────────────────────
+  referencedAfflictionPatterns: [
+    // "подвержен проклятию X" / "подвергается проклятию X"
+    /(?:подверж\S+|подвергает\S+)\s+(.+?)(?:\s*[（(]|\s*$)/gi,
+    // English fallbacks
+    /\b(?:exposed|subjected)\s+to\s+(?:the\s+)?(.+?)(?:\s*[（(]|\s*$)/gi,
+    /\bcontracts?\s+(?:the\s+)?(.+?)(?:\s*[（(]|\s*$)/gi,
+    /\bafflicted\s+with\s+(?:the\s+)?(.+?)(?:\s*[（(]|\s*$)/gi,
+  ],
+
   // ── Multiple-exposure patterns ─────────────────────────────────────────────
   multipleExposurePatterns: [
     {

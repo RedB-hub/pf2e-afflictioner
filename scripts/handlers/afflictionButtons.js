@@ -166,6 +166,9 @@ async function addApplyAfflictionButton(message, htmlElement) {
   const afflictionData = AfflictionParser.parseFromItem(item);
   if (!afflictionData || shouldSkipAffliction(afflictionData)) return;
 
+  // Store the origin actor so referenced afflictions can look up items on it later
+  afflictionData.originActorUuid = actor.uuid;
+
   // Always prefer DC and save type from the note — they're computed at roll time with elite/weak adjustments applied
   const noteDcMatch = afflictionNote.text?.match(/data-pf2-dc="(\d+)"/i);
   if (noteDcMatch) {
@@ -302,6 +305,10 @@ async function addApplyAfflictionToSelectedButton(message, htmlElement) {
   if (!afflictionData || shouldSkipAffliction(afflictionData)) {
     return;
   }
+
+  // Store the origin actor so referenced afflictions can look up items on it later
+  const originActorUuid = getSystemFlags(message)?.origin?.actor || message.actor?.uuid || null;
+  if (originActorUuid) afflictionData.originActorUuid = originActorUuid;
 
   // Extract DC from message content save button (spell DCs are computed at cast time)
   if (!afflictionData.dc) {

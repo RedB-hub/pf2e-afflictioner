@@ -259,6 +259,28 @@ export class AfflictionEffectBuilder {
       }
     }
 
+    // Status/circumstance/item penalties: "–2 status penalty to checks made to Recall Knowledge"
+    // Supports en-dash \u2013, em-dash \u2014, and ASCII hyphen.
+    const penaltyRe = /[\u2013\u2014-](\d+)\s+(item|circumstance|status)\s+penalty\s+to\s+([^(]+)/gi;
+    for (const match of effectText.matchAll(penaltyRe)) {
+      const value = -parseInt(match[1]);
+      const type = match[2].toLowerCase();
+      const targetText = match[3];
+
+      const targets = targetText.split(/,\s*(?:and\s+)?|\s+and\s+/);
+      for (const target of targets) {
+        const trimmed = target.trim().replace(/\s+checks?$/i, '').replace(/\s+made$/i, '');
+        if (!trimmed) continue;
+
+        bonuses.push({
+          value,
+          type,
+          selector: this.parseSelector(trimmed),
+          predicate: this.parsePredicate(trimmed)
+        });
+      }
+    }
+
     // Speed penalties (locale-aware)
     for (const { regex, valueGroup } of getParserLocale().speedPenaltyPatterns) {
       regex.lastIndex = 0;
@@ -291,6 +313,7 @@ export class AfflictionEffectBuilder {
     if (lower.includes('perception')) return 'perception';
     if (lower.includes('acrobatics')) return 'acrobatics';
     if (lower.includes('athletics')) return 'athletics';
+    if (lower.includes('recall knowledge')) return 'skill-check';
     if (lower.includes('skill') || lower.includes('check')) return 'skill-check';
 
     return 'attack-roll';
@@ -305,6 +328,7 @@ export class AfflictionEffectBuilder {
     if (lower.includes('against fear')) predicates.push('item:trait:fear');
     if (lower.includes('against poison')) predicates.push('item:trait:poison');
     if (lower.includes('against disease')) predicates.push('item:trait:disease');
+    if (lower.includes('recall knowledge')) predicates.push('action:recall-knowledge');
 
     return predicates.length > 0 ? predicates : undefined;
   }

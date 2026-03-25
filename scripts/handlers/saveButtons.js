@@ -5,6 +5,7 @@ export function registerSaveButtonHandlers(root) {
   registerInitialSaveButtons(root);
   registerStageSaveButtons(root);
   registerConfirmationButtons(root);
+  registerReferencedSaveButtons(root);
 }
 
 function registerInitialSaveButtons(root) {
@@ -247,6 +248,65 @@ function registerConfirmationButtons(root) {
       btn.disabled = true;
       btn.textContent = game.i18n.localize('PF2E_AFFLICTIONER.BUTTONS.APPLIED');
       btn.style.opacity = '0.5';
+    });
+  });
+}
+
+function registerReferencedSaveButtons(root) {
+  const buttons = root.querySelectorAll('.affliction-roll-referenced-save');
+  buttons.forEach(button => {
+    button.addEventListener('click', async (event) => {
+      const btn = event.currentTarget;
+      const tokenId = btn.dataset.tokenId;
+      const dc = parseInt(btn.dataset.dc);
+      const saveType = btn.dataset.saveType || 'fortitude';
+      const refData = JSON.parse(decodeURIComponent(btn.dataset.refData));
+
+      const token = tokenId ? canvas.tokens.get(tokenId) : null;
+      const actor = token?.actor;
+      if (!actor) {
+        ui.notifications.warn(game.i18n.localize('PF2E_AFFLICTIONER.ERRORS.TOKEN_NOT_FOUND'));
+        return;
+      }
+
+      // Roll the save
+      const isNpc = actor.type === 'npc';
+      const rollOptions = { dc: { value: dc } };
+      if (isNpc) rollOptions.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+
+      let rollMessage = null;
+      Hooks.once('createChatMessage', (message) => {
+        if (message.actor?.id === actor.id && getSystemFlags(message)?.context?.type === 'saving-throw') {
+          rollMessage = message;
+        }
+      });
+
+      await actor.saves[saveType].roll(rollOptions);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (!rollMessage) {
+        rollMessage = game.messages.contents[game.messages.contents.length - 1];
+      }
+
+      // Determine degree of success
+      const { AfflictionService } = await import('../services/AfflictionService.js');
+      const roll = rollMessage?.rolls?.[0];
+      if (!roll) return;
+
+      const dieValue = AfflictionService.getDieValue(roll);
+      const degree = AfflictionService.calculateDegreeOfSuccess(roll.total, dc, dieValue);
+
+      await AfflictionService.applyEffectOnlyResult(token, refData, degree);
+
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'default';
+
+      const { DEGREE_OF_SUCCESS } = await import('../constants.js');
+      const success = degree === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS || degree === DEGREE_OF_SUCCESS.SUCCESS;
+      btn.innerHTML = success
+        ? `<i class="fas fa-shield-alt"></i> ${game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.REFERENCED_RESISTED', { tokenName: token.name, afflictionName: refData.name })}`
+        : `<i class="fas fa-skull-crossbones"></i> ${game.i18n.format('PF2E_AFFLICTIONER.NOTIFICATIONS.REFERENCED_AFFLICTED', { tokenName: token.name, afflictionName: refData.name })}`;
     });
   });
 }

@@ -120,6 +120,16 @@ export const ZH_PARSER_LOCALE = {
     { regex: /速度[\u2013\u2014-](\d+)尺状态减值/g, valueGroup: 1 },
   ],
 
+  // ── Effect section label ──────────────────────────────────────────────────
+  effectLabelRe: '(?:效果|Effect)',
+
+  // ── Referenced affliction patterns ──────────────────────────────────────────
+  referencedAfflictionPatterns: [
+    // "暴露于 X" / "感染 X"
+    /暴露于\s*(.+?)(?:\s*[（(]|\s*$)/gi,
+    /感染\s*(.+?)(?:\s*[（(]|\s*$)/gi,
+  ],
+
   // ── Multiple-exposure patterns ─────────────────────────────────────────────
   multipleExposurePatterns: [
     {

@@ -259,7 +259,10 @@
       "STORYFRAME_SAVE_REQUESTED": "Storyframe запрашивает спасбросок Стойкости от {actorName}",
       "CAN_COUNTERACT_RANGE": "Противодействие возможно против эффекта до {maxRank} ранга — ранг недуга {afflictionRank} в указанном диапазоне.",
       "CANNOT_COUNTERACT_RANK": "Противодействие возможно против эффекта до {maxRank} ранга, но ранг недуга {afflictionRank}.",
-      "NO_STAGES_DEFINED": "Для недуга {name} не указаны стадии"
+      "NO_STAGES_DEFINED": "Для недуга {name} не указаны стадии",
+      "REFERENCED_NO_DC": "Упоминаемый недуг \"{name}\" (из {parentName}) не имеет КС — невозможно запросить спасбросок",
+      "REFERENCED_RESISTED": "{tokenName} сопротивляется {afflictionName}",
+      "REFERENCED_AFFLICTED": "{tokenName} поражён {afflictionName}"
     },
     "FEATS": {
       "BLOWGUN_POISONER_APPLIED": "Отравитель с духовой трубкой: степень успеха первичного спасброска {targetName} против {afflictionName} снижена на одну степень.",
@@ -487,6 +490,9 @@
       "VIRULENT_NOTE": "Вирулентный: Для снижения эффекта необходимо два последовательных успешных спасброска; критический успех снижает недуг только на 1 стадию",
       "TREATMENT_BONUS_ACTIVE": "Бонус лечения активен",
       "SAVE_REQUIRED_HEADING": "{afflictionName} требуется спасбросок",
+      "REFERENCED_SAVE_TITLE": "Вторичный недуг: {afflictionName}",
+      "REFERENCED_SAVE_DESC": "<strong>{tokenName}</strong> подвергается воздействию <strong>{afflictionName}</strong> (вызвано {parentName})",
+      "ROLL_REFERENCED_SAVE": "Бросить спасбросок {saveType}",
       "DAMAGE_HEADING": "{afflictionName} урон",
       "TAKES_DAMAGE": "получает урон от недуга",
       "DAMAGE_LABEL": "Урон:",

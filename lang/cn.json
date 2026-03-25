@@ -244,7 +244,10 @@
       "STORYFRAME_SAVE_REQUESTED": "已通过 Storyframe 请求 {actorName} 进行强韧豁免",
       "CAN_COUNTERACT_RANGE": "最高可反制环级 {maxRank} — 苦难环级 {afflictionRank} 在反制范围内。",
       "CANNOT_COUNTERACT_RANK": "最高可反制环级 {maxRank}，但该苦难的环级为 {afflictionRank}。",
-      "NO_STAGES_DEFINED": "苦难 {name} 未定义任何阶段"
+      "NO_STAGES_DEFINED": "苦难 {name} 未定义任何阶段",
+      "REFERENCED_NO_DC": "引用的苦难 \"{name}\"（来自 {parentName}）没有DC — 无法请求豁免",
+      "REFERENCED_RESISTED": "{tokenName} 抵抗了 {afflictionName}",
+      "REFERENCED_AFFLICTED": "{tokenName} 被 {afflictionName} 影响"
     },
     "FEATS": {
       "BLOWGUN_POISONER_APPLIED": "吹箭投毒者：{targetName} 对 {afflictionName} 的初始豁免被降低一个等级。",
@@ -470,6 +473,9 @@
       "VIRULENT_NOTE": "恶性：成功没有效果，大成功仅使阶段降低 1 级",
       "TREATMENT_BONUS_ACTIVE": "治疗加值激活",
       "SAVE_REQUIRED_HEADING": "需要进行 {afflictionName} 豁免",
+      "REFERENCED_SAVE_TITLE": "次要苦难：{afflictionName}",
+      "REFERENCED_SAVE_DESC": "<strong>{tokenName}</strong> 暴露于 <strong>{afflictionName}</strong>（由 {parentName} 触发）",
+      "ROLL_REFERENCED_SAVE": "进行 {saveType} 豁免",
       "DAMAGE_HEADING": "{afflictionName} 伤害",
       "TAKES_DAMAGE": "受到来自苦难的伤害",
       "DAMAGE_LABEL": "伤害：",

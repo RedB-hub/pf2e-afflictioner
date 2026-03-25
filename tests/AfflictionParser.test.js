@@ -126,6 +126,109 @@ describe('AfflictionParser — English', () => {
     );
   });
 
+  // ── detectManualHandling ─────────────────────────────────────────────────
+
+  test('does not flag "or" substring in words like "history"', () => {
+    const text = '5d6 mental damage, Stupefied 2, and the target is exposed to the curse of flawed history';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(false);
+  });
+
+  test('flags standalone "or" as manual handling', () => {
+    const text = '1d6 fire or cold damage';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(true);
+  });
+
+  test('does not flag "or" inside HTML attributes', () => {
+    const text = '<a class="inline-roll roll" data-formula="{5d6[mental]}"><span>5d6 mental</span></a> damage and Stupefied 2';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(false);
+  });
+
+  test('stage with "history" text parses conditions correctly', () => {
+    const html =
+      '<p><strong>Stage 1</strong> @Damage[4d6[mental]] damage and @UUID[Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg]{Stupefied 1} (1 round)</p>' +
+      '<p><strong>Stage 2</strong> @Damage[5d6[mental]] damage, @UUID[Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg]{Stupefied 2}, and the target is exposed to the curse of flawed history (1 round)</p>';
+
+    const stages = AfflictionParser.extractStages(html);
+    expect(stages).toHaveLength(2);
+    expect(stages[1].requiresManualHandling).toBe(false);
+    expect(stages[1].conditions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'stupefied', value: 2 })]),
+    );
+  });
+
+  // ── extractReferencedAfflictions ──────────────────────────────────────────
+
+  test('extracts referenced affliction from "exposed to" text', () => {
+    const text = 'damage, Stupefied 2, and the target is exposed to the curse of flawed history (1 round)';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(1);
+    expect(refs[0].toLowerCase()).toBe('curse of flawed history');
+  });
+
+  test('extracts referenced affliction from "contracts" text', () => {
+    const text = 'the target contracts ghoul fever';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(1);
+    expect(refs[0].toLowerCase()).toBe('ghoul fever');
+  });
+
+  test('returns empty array when no reference found', () => {
+    const text = '1d6 poison damage and sickened 1';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(0);
+  });
+
+  test('stage 2 of Retrocognitive Ink includes referencedAfflictions', () => {
+    const html =
+      '<p><strong>Stage 1</strong> @Damage[4d6[mental]] damage and @UUID[Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg]{Stupefied 1} (1 round)</p>' +
+      '<p><strong>Stage 2</strong> @Damage[5d6[mental]] damage, @UUID[Compendium.pf2e.conditionitems.Item.e1XGnhKNSQIm5IXg]{Stupefied 2}, and the target is exposed to the curse of flawed history (1 round)</p>';
+
+    const stages = AfflictionParser.extractStages(html);
+    expect(stages[0].referencedAfflictions).toHaveLength(0);
+    expect(stages[1].referencedAfflictions).toHaveLength(1);
+    expect(stages[1].referencedAfflictions[0].toLowerCase()).toBe('curse of flawed history');
+  });
+
+  // ── extractEffectSection ────────────────────────────────────────────────
+
+  test('extracts Effect section from HTML', () => {
+    const html = '<p><strong>Effect</strong> The creature takes a -2 status penalty to checks.</p>';
+    const effect = AfflictionParser.extractEffectSection(html);
+    expect(effect).toContain('creature takes a -2 status penalty');
+  });
+
+  test('returns null when no Effect section', () => {
+    const html = '<p><strong>Stage 1</strong> 1d6 poison (1 round)</p>';
+    expect(AfflictionParser.extractEffectSection(html)).toBeNull();
+  });
+
+  // ── parseEffectOnlyItem ─────────────────────────────────────────────────
+
+  test('parses effect-only curse item', () => {
+    const item = {
+      name: 'Curse of Flawed History',
+      uuid: 'test-uuid',
+      system: {
+        traits: { value: ['curse', 'primal'] },
+        level: { value: 18 },
+        description: {
+          value:
+            '<p><strong>Saving Throw</strong> <a class="inline-check" data-pf2-check="will" data-pf2-dc="37">DC 37 Will</a></p>' +
+            '<p><strong>Effect</strong> The creature takes a \u20132 status penalty to checks made to Recall Knowledge. This curse has an unlimited duration.</p>',
+        },
+      },
+    };
+
+    const result = AfflictionParser.parseEffectOnlyItem(item);
+    expect(result).not.toBeNull();
+    expect(result.isEffectOnly).toBe(true);
+    expect(result.name).toBe('Curse of Flawed History');
+    expect(result.type).toBe('curse');
+    expect(result.dc).toBe(37);
+    expect(result.saveType).toBe('will');
+    expect(result.effectText).toContain('status penalty');
+  });
+
   // ── extractDamage ─────────────────────────────────────────────────────────
 
   test('extracts damage from @Damage enricher', () => {

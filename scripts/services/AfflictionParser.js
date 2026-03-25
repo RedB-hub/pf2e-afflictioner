@@ -29,6 +29,8 @@ export class AfflictionParser {
     }
 
     if (!stages || stages.length === 0) {
+      const effectOnly = this.parseEffectOnlyItem(item);
+      if (effectOnly) return effectOnly;
       return { skip: true };
     }
 
@@ -237,7 +239,8 @@ export class AfflictionParser {
         conditions: this.extractConditions(effects),
         weakness: this.extractWeakness(effects),
         requiresManualHandling: this.detectManualHandling(effects),
-        isDead: this.detectDeath(effects)
+        isDead: this.detectDeath(effects),
+        referencedAfflictions: this.extractReferencedAfflictions(effects)
       });
       matchedStageNums.add(stageNum);
     }
@@ -275,7 +278,8 @@ export class AfflictionParser {
         conditions: this.extractConditions(rawContent),
         weakness: this.extractWeakness(rawContent),
         requiresManualHandling: this.detectManualHandling(plainText),
-        isDead: this.detectDeath(rawContent)
+        isDead: this.detectDeath(rawContent),
+        referencedAfflictions: this.extractReferencedAfflictions(rawContent)
       });
       matchedStageNums.add(stageNum);
     }
@@ -301,7 +305,8 @@ export class AfflictionParser {
           conditions: this.extractConditions(effects),
           weakness: this.extractWeakness(effects),
           requiresManualHandling: this.detectManualHandling(effects),
-          isDead: this.detectDeath(effects)
+          isDead: this.detectDeath(effects),
+          referencedAfflictions: this.extractReferencedAfflictions(effects)
         });
       }
     }
@@ -321,8 +326,11 @@ export class AfflictionParser {
   }
 
   static detectManualHandling(effectsText) {
-    const lowerText = effectsText.toLowerCase();
-    return getParserLocale().manualKeywords.some(keyword => lowerText.includes(keyword));
+    const stripped = this.stripEnrichment(effectsText).toLowerCase();
+    return getParserLocale().manualKeywords.some(keyword => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`\\b${escaped}\\b`).test(stripped);
+    });
   }
 
   static detectDeath(effectsText) {
@@ -597,5 +605,76 @@ export class AfflictionParser {
     }
 
     return null;
+  }
+
+  static extractReferencedAfflictions(text) {
+    const locale = getParserLocale();
+    if (!locale.referencedAfflictionPatterns) return [];
+
+    const stripped = this.stripEnrichment(text);
+    const references = [];
+    const seenNames = new Set();
+
+    for (const pattern of locale.referencedAfflictionPatterns) {
+      // Reset lastIndex for global regexes
+      pattern.lastIndex = 0;
+      for (const match of stripped.matchAll(pattern)) {
+        const name = match[1].trim().replace(/[,;.]+$/, '');
+        if (name.length > 2 && !seenNames.has(name.toLowerCase())) {
+          references.push(name);
+          seenNames.add(name.toLowerCase());
+        }
+      }
+    }
+    return references;
+  }
+
+  static extractEffectSection(description) {
+    const locale = getParserLocale();
+    if (!locale.effectLabelRe) return null;
+
+    // HTML: <strong>Effect</strong> content until next <strong> or end
+    const htmlMatch = description.match(
+      new RegExp(`<strong>${locale.effectLabelRe}<\\/strong>${locale.afterLabelOpt}([\\s\\S]*?)(?=<strong>|$)`, 'i')
+    );
+    if (htmlMatch) return htmlMatch[1].trim();
+
+    // Plain text fallback
+    const plainMatch = description.match(
+      new RegExp(`${locale.effectLabelRe}${locale.afterLabel}([^<]+)`, 'i')
+    );
+    return plainMatch ? plainMatch[1].trim() : null;
+  }
+
+  static parseEffectOnlyItem(item) {
+    const traits = item.system?.traits?.value || [];
+    const type = traits.includes('poison') ? 'poison' :
+      traits.includes('disease') ? 'disease' :
+        traits.includes('curse') ? 'curse' : null;
+    if (!type) return null;
+
+    const description = item.system?.description?.value || '';
+
+    const effectText = this.extractEffectSection(description);
+    if (!effectText) return null;
+
+    const strippedEffect = this.stripEnrichment(effectText);
+
+    return {
+      name: item.name,
+      type,
+      dc: this.extractDC(description, item),
+      saveType: this.extractSaveType(description, item),
+      onset: null,
+      stages: null,
+      isEffectOnly: true,
+      effectText: effectText,
+      effectConditions: this.extractConditions(effectText),
+      maxDuration: this.extractMaxDuration(description) || null,
+      isVirulent: traits.includes('virulent'),
+      sourceItemUuid: item.uuid,
+      level: item.system?.level?.value || 0,
+      requiresManualHandling: this.detectManualHandling(strippedEffect),
+    };
   }
 }

@@ -261,7 +261,10 @@
       "STORYFRAME_SAVE_REQUESTED": "Fortitude save requested from {actorName} via Storyframe",
       "CAN_COUNTERACT_RANGE": "Can counteract up to rank {maxRank} — affliction rank {afflictionRank} is within range.",
       "CANNOT_COUNTERACT_RANK": "Can counteract up to rank {maxRank}, but affliction is rank {afflictionRank}.",
-      "NO_STAGES_DEFINED": "Affliction {name} has no stages defined"
+      "NO_STAGES_DEFINED": "Affliction {name} has no stages defined",
+      "REFERENCED_NO_DC": "Referenced affliction \"{name}\" (from {parentName}) has no DC — cannot prompt save",
+      "REFERENCED_RESISTED": "{tokenName} resisted {afflictionName}",
+      "REFERENCED_AFFLICTED": "{tokenName} is afflicted by {afflictionName}"
     },
     "FEATS": {
       "BLOWGUN_POISONER_APPLIED": "Blowgun Poisoner: {targetName}'s initial save against {afflictionName} was degraded one step.",
@@ -495,6 +498,9 @@
       "VIRULENT_NOTE": "Virulent: Success has no effect, critical success reduces by only 1 stage",
       "TREATMENT_BONUS_ACTIVE": "Treatment bonus active",
       "SAVE_REQUIRED_HEADING": "{afflictionName} Save Required",
+      "REFERENCED_SAVE_TITLE": "Secondary Affliction: {afflictionName}",
+      "REFERENCED_SAVE_DESC": "<strong>{tokenName}</strong> is exposed to <strong>{afflictionName}</strong> (triggered by {parentName})",
+      "ROLL_REFERENCED_SAVE": "Roll {saveType} Save",
       "DAMAGE_HEADING": "{afflictionName} Damage",
       "TAKES_DAMAGE": "takes damage from affliction",
       "DAMAGE_LABEL": "Damage:",

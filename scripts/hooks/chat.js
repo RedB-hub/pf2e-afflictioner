@@ -39,6 +39,9 @@ export async function onCreateChatMessage(message, options, userId) {
   const afflictionData = AfflictionParser.parseFromItem(item);
   if (!afflictionData) return;
 
+  // Store the origin actor so referenced afflictions can look up items on it later
+  afflictionData.originActorUuid = item.parent?.uuid || flags.origin?.actor || null;
+
   // Use the DC from the saving throw context — it includes elite/weak adjustments
   const contextDC = flags.context?.dc?.value;
   if (contextDC) afflictionData.dc = contextDC;

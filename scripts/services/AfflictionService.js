@@ -506,6 +506,254 @@ export class AfflictionService {
 
     await AfflictionEffectBuilder.applyPersistentConditions(actor, affliction, stage);
     await AfflictionEffectBuilder.applyPersistentDamage(actor, affliction, stage);
+
+    // Process any afflictions referenced in the stage text (e.g. "exposed to the curse of X")
+    await this.processReferencedAfflictions(token, affliction, stage);
+  }
+
+  static async processReferencedAfflictions(token, affliction, stage) {
+    if (!stage.referencedAfflictions || stage.referencedAfflictions.length === 0) return;
+
+    const actor = token?.actor;
+    if (!actor) return;
+
+    // Resolve origin actor from stored UUID
+    let originActor = null;
+    if (affliction.originActorUuid) {
+      try {
+        originActor = await fromUuid(affliction.originActorUuid);
+      } catch { /* ignore */ }
+    }
+
+    for (const refName of stage.referencedAfflictions) {
+      // Prevent circular references
+      if (refName.toLowerCase() === affliction.name?.toLowerCase()) continue;
+
+      const refItem = await this.findReferencedItem(refName, originActor);
+      if (!refItem) {
+        console.warn(`PF2e Afflictioner | Referenced item "${refName}" not found (from ${affliction.name})`);
+        continue;
+      }
+
+      const refData = AfflictionParser.parseFromItem(refItem);
+      if (!refData) continue;
+
+      refData.originActorUuid = affliction.originActorUuid;
+
+      if (refData.isEffectOnly) {
+        // Effect-only item (no stages): prompt save, apply as standalone effect
+        await this.applyEffectOnlyAffliction(token, refData, affliction);
+      } else if (!refData.skip) {
+        // Full staged affliction: use normal flow
+        await this.promptInitialSave(token, refData);
+      }
+    }
+  }
+
+  static async findReferencedItem(name, originActor) {
+    const lowerName = name.toLowerCase();
+
+    // 1. Search origin actor's items
+    if (originActor) {
+      const found = originActor.items?.find(i => i.name.toLowerCase() === lowerName);
+      if (found) return found;
+    }
+
+    // 2. Search world items
+    const worldItem = game.items?.find(i => i.name.toLowerCase() === lowerName);
+    if (worldItem) return worldItem;
+
+    // 3. Search compendiums (equipment, spells, feats)
+    const packNames = ['pf2e.equipment-srd', 'pf2e.spells-srd', 'pf2e.feat-effects'];
+    for (const packName of packNames) {
+      const pack = game.packs?.get(packName);
+      if (!pack) continue;
+      try {
+        const index = await pack.getIndex({ fields: ['name', 'system.traits'] });
+        const entry = index.find(e => e.name.toLowerCase() === lowerName);
+        if (entry) return await pack.getDocument(entry._id);
+      } catch { /* ignore */ }
+    }
+
+    return null;
+  }
+
+  static async applyEffectOnlyAffliction(token, refData, parentAffliction) {
+    const actor = token?.actor;
+    if (!actor) return;
+
+    const i = game.i18n;
+    const dc = refData.dc;
+    const saveType = refData.saveType || 'fortitude';
+    const tokenName = token.name;
+
+    if (!dc) {
+      ui.notifications.warn(i.format('PF2E_AFFLICTIONER.NOTIFICATIONS.REFERENCED_NO_DC', {
+        name: refData.name,
+        parentName: parentAffliction.name
+      }));
+      return;
+    }
+
+    const showDCToPlayers = game.pf2e?.settings?.metagame?.dcs ?? true;
+    const gmWhisper = game.users.filter(u => u.isGM).map(u => u.id);
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+
+    const refDataPayload = encodeURIComponent(JSON.stringify({
+      name: refData.name,
+      type: refData.type,
+      effectText: refData.effectText,
+      effectConditions: refData.effectConditions,
+      sourceItemUuid: refData.sourceItemUuid,
+      maxDuration: refData.maxDuration || null,
+      level: refData.level
+    }));
+
+    const buttonAttrs = `class="affliction-roll-referenced-save"
+                data-token-id="${token.id}"
+                data-dc="${dc}"
+                data-save-type="${saveType}"
+                data-ref-data="${refDataPayload}"
+                style="width: 100%; padding: 8px; margin-top: 10px; background: #4a0080; border: 2px solid #6a00b0; color: white; border-radius: 6px; cursor: pointer; font-weight: bold;"`;
+
+    // Player-facing message with save button (same pattern as regular affliction saves)
+    const playerContent = `
+      <div class="pf2e-afflictioner-save-request" style="border-color: #4a0080; padding: 12px;">
+        <h3><i class="fas fa-skull-crossbones"></i> ${i.format('PF2E_AFFLICTIONER.CHAT.REFERENCED_SAVE_TITLE', { afflictionName: refData.name })}</h3>
+        <p>${i.format('PF2E_AFFLICTIONER.CHAT.REFERENCED_SAVE_DESC', { tokenName, afflictionName: refData.name, parentName: parentAffliction.name })}</p>
+        <p><strong>${showDCToPlayers ? `DC ${dc} ` : ''}${capitalize(saveType)}</strong></p>
+        <hr>
+        <button ${buttonAttrs}>
+          <i class="fas fa-dice-d20"></i> ${i.format('PF2E_AFFLICTIONER.CHAT.ROLL_REFERENCED_SAVE', { saveType: capitalize(saveType) })}
+        </button>
+      </div>
+    `;
+
+    const playerWhisper = actor.hasPlayerOwner
+      ? game.users.filter(u => !u.isGM && actor.testUserPermission(u, 'OWNER')).map(u => u.id)
+      : gmWhisper;
+
+    await ChatMessage.create({
+      content: playerContent,
+      speaker: ChatMessage.getSpeaker({ token }),
+      whisper: playerWhisper
+    });
+
+    // GM-only message with DC + effect details
+    const gmContent = `
+      <div class="pf2e-afflictioner-save-request" style="border-color: #4a0080; padding: 8px;">
+        <p style="margin: 0;"><strong>${refData.name} - DC ${dc} ${capitalize(saveType)}</strong> (${i.localize('PF2E_AFFLICTIONER.CHAT.GM_INFO')})</p>
+        ${refData.effectText ? `<blockquote style="margin: 6px 0; padding: 4px 8px; border-left: 3px solid #4a0080; font-size: 0.85em;">${refData.effectText}</blockquote>` : ''}
+      </div>
+    `;
+    await ChatMessage.create({
+      content: gmContent,
+      speaker: ChatMessage.getSpeaker({ token }),
+      whisper: gmWhisper
+    });
+  }
+
+  static async applyEffectOnlyResult(token, refData, degree) {
+    const actor = token?.actor;
+    if (!actor) return;
+
+    const i = game.i18n;
+
+    if (degree === DEGREE_OF_SUCCESS.CRITICAL_SUCCESS || degree === DEGREE_OF_SUCCESS.SUCCESS) {
+      ui.notifications.info(i.format('PF2E_AFFLICTIONER.NOTIFICATIONS.REFERENCED_RESISTED', {
+        tokenName: token.name,
+        afflictionName: refData.name
+      }));
+      return;
+    }
+
+    // Failed or critically failed — apply the effect
+    const effectText = refData.effectText || refData.name;
+    const bonuses = AfflictionEffectBuilder.extractBonuses(
+      AfflictionParser.stripEnrichment(effectText)
+    );
+
+    const rules = [];
+    for (const bonus of bonuses) {
+      const rule = {
+        key: 'FlatModifier',
+        selector: bonus.selector,
+        type: bonus.type,
+        value: bonus.value,
+        label: refData.name
+      };
+      if (bonus.predicate) rule.predicate = bonus.predicate;
+      rules.push(rule);
+    }
+
+    // Also grant conditions from effect text
+    if (refData.effectConditions?.length > 0) {
+      for (const condition of refData.effectConditions) {
+        const conditionUuid = await AfflictionEffectBuilder.getConditionUuid(condition.name);
+        if (conditionUuid) {
+          const grantRule = {
+            key: 'GrantItem',
+            uuid: conditionUuid,
+            allowDuplicate: true,
+            inMemoryOnly: true,
+            onDeleteActions: { grantee: 'restrict' }
+          };
+          if (condition.value) {
+            grantRule.alterations = [{
+              mode: 'override',
+              property: 'badge-value',
+              value: condition.value
+            }];
+          }
+          rules.push(grantRule);
+        }
+      }
+    }
+
+    // Determine duration
+    const durationConfig = refData.maxDuration
+      ? {
+        value: refData.maxDuration.value || -1,
+        unit: AfflictionEffectBuilder._normalizeUnit(refData.maxDuration.unit || 'unlimited'),
+        expiry: 'turn-start',
+        sustained: false
+      }
+      : { value: -1, unit: 'unlimited', expiry: null, sustained: false };
+
+    // Resolve source item image
+    let itemImg = 'icons/svg/hazard.svg';
+    if (refData.sourceItemUuid) {
+      try {
+        const sourceItem = await fromUuid(refData.sourceItemUuid);
+        if (sourceItem?.img) itemImg = sourceItem.img;
+      } catch { /* ignore */ }
+    }
+
+    const effectData = {
+      type: 'effect',
+      name: refData.name,
+      img: itemImg,
+      system: {
+        description: { value: `<p>${effectText}</p>` },
+        tokenIcon: { show: true },
+        duration: durationConfig,
+        rules,
+        slug: `${refData.name.toLowerCase().replace(/\s+/g, '-')}-effect`,
+      },
+      flags: {
+        'pf2e-afflictioner': {
+          isReferencedEffect: true,
+          sourceAffliction: refData.name
+        }
+      }
+    };
+
+    await actor.createEmbeddedDocuments('Item', [effectData]);
+
+    ui.notifications.warn(i.format('PF2E_AFFLICTIONER.NOTIFICATIONS.REFERENCED_AFFLICTED', {
+      tokenName: token.name,
+      afflictionName: refData.name
+    }));
   }
 
   static async removeStageEffects(token, affliction, oldStageData = null, newStageData = null) {
