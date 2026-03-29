@@ -9,6 +9,8 @@ FoundryVTT enricher syntax (`@Damage[...]`, `@UUID[...]`, `@Check[...]`, `[[/r .
 ## 1. Affliction Trait Names
 
 Used to detect affliction type from item traits.
+These are matched against PF2e system trait slugs — they only need translating if the
+system localises its trait slugs (most systems do not).
 
 | English    | Another |
 | ---------- | ------- |
@@ -22,6 +24,7 @@ Used to detect affliction type from item traits.
 ## 2. Structural Section Headers
 
 These appear as bold labels in item descriptions (often inside `<strong>` tags).
+Defined as regex fragments in the locale file.
 
 | English                                        | Another |
 | ---------------------------------------------- | ------- |
@@ -31,7 +34,17 @@ These appear as bold labels in item descriptions (often inside `<strong>` tags).
 
 ---
 
-## 3. Stage Cross-Reference Phrase
+## 3. Effect Section Label
+
+Used to detect the "Effect" header in items that have an effect section (e.g. contact poisons).
+
+| English  | Another |
+| -------- | ------- |
+| `Effect` | ?       |
+
+---
+
+## 4. Stage Cross-Reference Phrase
 
 Used when one stage says "same effects as stage N".
 
@@ -41,9 +54,9 @@ Used when one stage says "same effects as stage N".
 
 ---
 
-## 4. Duration Units
+## 5. Duration Units
 
-Used in `parseDuration`. The parser strips a trailing `s` so both singular and plural are covered.
+Used in `parseDuration`. Both singular and plural forms are mapped explicitly.
 
 | English (singular / plural) | Another |
 | --------------------------- | ------- |
@@ -55,7 +68,7 @@ Used in `parseDuration`. The parser strips a trailing `s` so both singular and p
 
 ---
 
-## 5. DC Label
+## 6. DC Label
 
 Used when no structured DC data is present and the parser falls back to plain text.
 
@@ -65,7 +78,7 @@ Used when no structured DC data is present and the parser falls back to plain te
 
 ---
 
-## 6. Death-Detection Keywords
+## 7. Death-Detection Keywords
 
 Any of these in a stage description marks it as a death stage.
 
@@ -77,7 +90,7 @@ Any of these in a stage description marks it as a death stage.
 
 ---
 
-## 7. Manual-Handling Keywords
+## 8. Manual-Handling Keywords
 
 If a stage contains any of these, it is flagged for GM attention instead of being auto-applied.
 
@@ -97,7 +110,7 @@ If a stage contains any of these, it is flagged for GM attention instead of bein
 
 ---
 
-## 8. Damage Types (plain-text fallback)
+## 9. Damage Types (plain-text fallback)
 
 Used when no `@Damage[...]` enricher is present. The parser scans for `NdN <type>` patterns.
 
@@ -119,7 +132,31 @@ Used when no `@Damage[...]` enricher is present. The parser scans for `NdN <type
 
 ---
 
-## 9. Condition Names
+## 10. "Or Damage" Pattern
+
+Used to detect "NdN type or type damage" constructs (e.g. "2d6 fire or cold damage").
+
+| English pattern                                                   | Another |
+| ----------------------------------------------------------------- | ------- |
+| `<dice> <type> or <type> damage` (e.g. "2d6 fire or cold damage") | ?       |
+
+The keywords that need translating here are `or` and `damage`.
+
+---
+
+## 11. "For Duration" Pattern
+
+Used to detect inline durations at the end of stage text (e.g. "stunned 1 for 1 round").
+
+| English pattern                                          | Another |
+| -------------------------------------------------------- | ------- |
+| `for <N> <unit>` (e.g. "for 1 round", "for 2d6 hours") | ?       |
+
+The keyword that needs translating here is `for`.
+
+---
+
+## 12. Condition Names
 
 Matched against plain text in stage descriptions. Also used to identify conditions inside
 `@UUID[...]{Display Name}` enrichers.
@@ -179,9 +216,15 @@ These display names are remapped internally before matching.
 | -------------------- | ----------------- | -------------------- |
 | `Flat-Footed`        | `off-guard`       | ?                    |
 
+### Word Boundaries
+
+The locale has a `useWordBoundaries` flag (default `true`). Set to `false` for locales that
+don't use ASCII word separators (e.g. Chinese, Japanese), so the condition search won't
+require `\b` boundaries.
+
 ---
 
-## 10. Weakness Patterns
+## 13. Weakness Patterns
 
 Two plain-text patterns are matched.
 
@@ -192,9 +235,36 @@ Two plain-text patterns are matched.
 
 ---
 
-## 11. Multiple Exposure Patterns
+## 14. Speed Penalty Patterns
 
-Two patterns are matched to detect "exposure stacks the affliction".
+Detects speed penalties in stage descriptions.
+
+| English pattern                                                                    | Another |
+| ---------------------------------------------------------------------------------- | ------- |
+| `–N-foot status penalty to (all) Speed` (e.g. "–10-foot status penalty to Speed") | ?       |
+
+The keywords that need translating are `foot`, `status penalty to`, and `Speed`.
+
+---
+
+## 15. Referenced Affliction Patterns
+
+Used to detect when a stage references another affliction by name
+(e.g. "the target is exposed to Demon Fever").
+
+| English pattern                                                 | Another |
+| --------------------------------------------------------------- | ------- |
+| `exposed to (the) <name>` (e.g. "exposed to Demon Fever")       | ?       |
+| `subjected to (the) <name>` (e.g. "subjected to the curse")     | ?       |
+| `contracts (the) <name>` (e.g. "contracts Filth Fever")         | ?       |
+| `contract (the) <name>`                                         | ?       |
+| `afflicted with (the) <name>` (e.g. "afflicted with Malaria")   | ?       |
+
+---
+
+## 16. Multiple Exposure Patterns
+
+Patterns matched to detect "exposure stacks the affliction".
 
 | English pattern                                                   | Another |
 | ----------------------------------------------------------------- | ------- |
@@ -208,9 +278,12 @@ Two patterns are matched to detect "exposure stacks the affliction".
 ## Notes for the translator
 
 - **All matches are case-insensitive**, so only one form per term is needed.
-- **Duration unit matching strips a trailing `s`**, so `round` covers both "round" and "rounds".
+- Duration units use an explicit map of singular and plural forms (not a trailing-`s` strip).
 - Condition names in `@UUID` enrichers come from the display text inside `{...}`, e.g.
   `@UUID[Compendium.pf2e.conditionitems.Item.xyz]{Clumsy 1}` — the parser reads `Clumsy 1`.
 - If the Another system uses different structural keywords (e.g. a different word for "Stage"
   in item HTML), those are the strings that matter — not necessarily a literal translation.
   Check an actual Another-localized affliction item's raw HTML to confirm.
+- Set `useWordBoundaries: false` if the locale does not use spaces/ASCII word separators.
+- The locale file lives at `scripts/locales/parser-locale-en.js` — copy it and adjust all
+  strings, regex patterns, and maps for the target language.
