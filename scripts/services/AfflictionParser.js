@@ -327,9 +327,19 @@ export class AfflictionParser {
 
   static detectManualHandling(effectsText) {
     const stripped = this.stripEnrichment(effectsText).toLowerCase();
-    return getParserLocale().manualKeywords.some(keyword => {
+    const locale = getParserLocale();
+    return locale.manualKeywords.some(keyword => {
       const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`\\b${escaped}\\b`).test(stripped);
+      const isAscii = /^[\x20-\x7e]+$/.test(keyword);
+      if (isAscii) {
+        return new RegExp(`\\b${escaped}\\b`).test(stripped);
+      }
+      // Non-ASCII: use space/punctuation boundaries for word-boundary locales,
+      // plain substring match for CJK locales (no word separators).
+      if (!locale.useWordBoundaries) {
+        return new RegExp(escaped).test(stripped);
+      }
+      return new RegExp(`(?:^|[\\s,;.])${escaped}(?:[\\s,;.]|$)`).test(stripped);
     });
   }
 
@@ -491,7 +501,11 @@ export class AfflictionParser {
       if (foundConditions.has(condKey)) continue;
 
       const escaped = displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`${b}${escaped}\\s*(\\d+)?${b}`, 'gi');
+      // \b only works for ASCII characters; non-ASCII names need space/punctuation boundaries
+      const isAscii = /^[\x20-\x7e]+$/.test(displayName);
+      const bStart = isAscii ? b : (locale.useWordBoundaries ? '(?:^|[\\s,;.])' : '');
+      const bEnd = isAscii ? b : (locale.useWordBoundaries ? '(?=[\\s,;.]|$)' : '');
+      const regex = new RegExp(`${bStart}${escaped}\\s*(\\d+)?${bEnd}`, 'gi');
       const match = plainText.match(regex);
       if (match) {
         const valueMatch = match[0].match(/\d+/);

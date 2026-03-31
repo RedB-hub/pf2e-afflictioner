@@ -309,6 +309,80 @@ describe('AfflictionParser — English', () => {
     };
     expect(AfflictionParser.parseFromItem(item)).toBeNull();
   });
+
+  // ── extractWeakness ─────────────────────────────────────────────────────────
+
+  test('extracts "weakness to fire 5"', () => {
+    const text = 'weakness to fire 5';
+    const weakness = AfflictionParser.extractWeakness(text);
+    expect(weakness).toEqual([{ type: 'fire', value: 5 }]);
+  });
+
+  test('extracts "weakness 5 to fire" (flipped)', () => {
+    const text = 'weakness 5 to fire';
+    const weakness = AfflictionParser.extractWeakness(text);
+    expect(weakness).toEqual([{ type: 'fire', value: 5 }]);
+  });
+
+  test('returns empty array when no weakness', () => {
+    expect(AfflictionParser.extractWeakness('1d6 poison damage')).toEqual([]);
+  });
+
+  // ── extractDamage (or-damage pattern) ─────────────────────────────────────
+
+  test('extracts "or" damage choice', () => {
+    const text = '2d6 fire or cold damage';
+    const damage = AfflictionParser.extractDamage(text);
+    expect(damage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ formula: '2d6', type: 'fire', isChoice: true, alternativeType: 'cold' }),
+      ]),
+    );
+  });
+
+  // ── extractMultipleExposure ───────────────────────────────────────────────
+
+  test('extracts "each time you are exposed" pattern', () => {
+    const desc = '<p>Each time you are exposed to this poison, increase the stage by 1.</p>';
+    const result = AfflictionParser.extractMultipleExposure(desc);
+    expect(result).not.toBeNull();
+    expect(result.enabled).toBe(true);
+    expect(result.stageIncrease).toBe(1);
+  });
+
+  test('extracts "multiple exposures" with min stage qualifier', () => {
+    const desc = '<p>Each additional exposure while at stage 2 increases the stage by 1.</p>';
+    const result = AfflictionParser.extractMultipleExposure(desc);
+    expect(result).not.toBeNull();
+    expect(result.stageIncrease).toBe(1);
+    expect(result.minStage).toBe(2);
+  });
+
+  test('returns null when no multiple exposure', () => {
+    const desc = '<p><strong>Stage 1</strong> 1d6 poison (1 round)</p>';
+    expect(AfflictionParser.extractMultipleExposure(desc)).toBeNull();
+  });
+
+  // ── extractEmbeddedAfflictionName ─────────────────────────────────────────
+
+  test('extracts embedded affliction name from spell', () => {
+    const desc = '<p>You inject venom. <strong>Spider Venom</strong> (poison)</p>';
+    expect(AfflictionParser.extractEmbeddedAfflictionName(desc, 'poison')).toBe('Spider Venom');
+  });
+
+  test('returns null when no embedded name', () => {
+    const desc = '<p><strong>Stage 1</strong> 1d6 poison (1 round)</p>';
+    expect(AfflictionParser.extractEmbeddedAfflictionName(desc, 'poison')).toBeNull();
+  });
+
+  // ── "for duration" pattern (paragraph stage format) ───────────────────────
+
+  test('parses stage with "for N unit" duration (no parentheses)', () => {
+    const html = '<p><strong>Stage 1</strong> stunned 1 for 1 round</p>';
+    const stages = AfflictionParser.extractStages(html);
+    expect(stages).toHaveLength(1);
+    expect(stages[0].duration).toEqual({ value: 1, unit: 'round', isDice: false });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -447,6 +521,95 @@ describe('AfflictionParser — Russian', () => {
       expect.arrayContaining([expect.objectContaining({ name: 'enfeebled', value: 1 })]),
     );
   });
+
+  // ── extractDamage ─────────────────────────────────────────────────────────
+
+  test('extracts damage from @Damage enricher in Russian context', () => {
+    const text = '@Damage[2d6[poison]]';
+    const damage = AfflictionParser.extractDamage(text);
+    expect(damage).toEqual(
+      expect.arrayContaining([expect.objectContaining({ formula: '2d6', type: 'poison' })]),
+    );
+  });
+
+  test('extracts damage from Russian plain text', () => {
+    const text = '2d6 яд';
+    const damage = AfflictionParser.extractDamage(text);
+    expect(damage).toEqual(
+      expect.arrayContaining([expect.objectContaining({ formula: '2d6', type: 'яд' })]),
+    );
+  });
+
+  // ── extractConditions (plain text) ────────────────────────────────────────
+
+  test('extracts Russian condition from plain text', () => {
+    const text = 'тошнота 1 и замедлен 1';
+    const conditions = AfflictionParser.extractConditions(text);
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'sickened', value: 1 }),
+        expect.objectContaining({ name: 'slowed', value: 1 }),
+      ]),
+    );
+  });
+
+  // ── detectManualHandling ─────────────────────────────────────────────────
+
+  test('flags Russian "или" as manual handling', () => {
+    const text = '1d6 огонь или холод';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(true);
+  });
+
+  test('flags Russian "тайный" as manual handling', () => {
+    const text = 'тайный бросок спасения';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(true);
+  });
+
+  // ── extractWeakness ───────────────────────────────────────────────────────
+
+  test('extracts Russian weakness "уязвим к огню 5"', () => {
+    const text = 'уязвим к огню 5';
+    const weakness = AfflictionParser.extractWeakness(text);
+    expect(weakness).toEqual([{ type: 'огню', value: 5 }]);
+  });
+
+  test('extracts Russian weakness flipped "уязвим 5 к огню"', () => {
+    const text = 'уязвим 5 к огню';
+    const weakness = AfflictionParser.extractWeakness(text);
+    expect(weakness).toEqual([{ type: 'огню', value: 5 }]);
+  });
+
+  // ── extractReferencedAfflictions ──────────────────────────────────────────
+
+  test('extracts Russian referenced affliction "подвержен"', () => {
+    const text = 'цель подвержена Демонической Лихорадке';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toBe('Демонической Лихорадке');
+  });
+
+  // ── extractEffectSection ──────────────────────────────────────────────────
+
+  test('extracts Russian effect section', () => {
+    const html = '<p><strong>Эффект</strong> Существо получает штраф -2 к проверкам.</p>';
+    const effect = AfflictionParser.extractEffectSection(html);
+    expect(effect).toContain('штраф -2');
+  });
+
+  test('extracts English Effect label in Russian locale (fallback)', () => {
+    const html = '<p><strong>Effect</strong> The creature takes a penalty.</p>';
+    const effect = AfflictionParser.extractEffectSection(html);
+    expect(effect).toContain('creature takes a penalty');
+  });
+
+  // ── extractMultipleExposure ───────────────────────────────────────────────
+
+  test('extracts English multiple exposure pattern in Russian locale (fallback)', () => {
+    const desc = '<p>Each time you are exposed to this poison, increase the stage by 1.</p>';
+    const result = AfflictionParser.extractMultipleExposure(desc);
+    expect(result).not.toBeNull();
+    expect(result.stageIncrease).toBe(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -508,6 +671,144 @@ describe('AfflictionParser — Chinese', () => {
     expect(result.type).toBe('poison');
     expect(result.dc).toBe(15);
     expect(result.stages).toHaveLength(2);
+  });
+
+  // ── extractDC ─────────────────────────────────────────────────────────────
+
+  test('extracts DC from @Check enricher (Chinese item)', () => {
+    const desc = '<p><strong>豁免</strong> @Check[fortitude|dc:18]</p>';
+    const item = { system: {} };
+    expect(AfflictionParser.extractDC(desc, item)).toBe(18);
+  });
+
+  test('extracts DC from Chinese plain text "DC 18"', () => {
+    const desc = 'DC 18 强韧';
+    const item = { system: {} };
+    expect(AfflictionParser.extractDC(desc, item)).toBe(18);
+  });
+
+  test('extracts DC without space "DC18"', () => {
+    const desc = 'DC18';
+    const item = { system: {} };
+    expect(AfflictionParser.extractDC(desc, item)).toBe(18);
+  });
+
+  // ── extractOnset ──────────────────────────────────────────────────────────
+
+  test('extracts Chinese onset', () => {
+    const desc = '<p><strong>潜伏期</strong> 1轮</p>';
+    expect(AfflictionParser.extractOnset(desc)).toEqual({ value: 1, unit: 'round', isDice: false });
+  });
+
+  test('extracts Chinese onset with space', () => {
+    const desc = '<p><strong>潜伏期</strong> 10分钟</p>';
+    expect(AfflictionParser.extractOnset(desc)).toEqual({ value: 10, unit: 'minute', isDice: false });
+  });
+
+  // ── extractConditions ─────────────────────────────────────────────────────
+
+  test('extracts Chinese condition from UUID enricher', () => {
+    const text = '@UUID[Compendium.pf2e.conditionitems.Item.abc]{恶心 2}';
+    const conditions = AfflictionParser.extractConditions(text);
+    expect(conditions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'sickened', value: 2 })]),
+    );
+  });
+
+  test('extracts Chinese conditions from plain text (no word boundaries)', () => {
+    const text = '恶心1和缓慢1';
+    const conditions = AfflictionParser.extractConditions(text);
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'sickened', value: 1 }),
+        expect.objectContaining({ name: 'slowed', value: 1 }),
+      ]),
+    );
+  });
+
+  // ── extractDamage ─────────────────────────────────────────────────────────
+
+  test('extracts damage from Chinese plain text', () => {
+    const text = '2d6 毒素';
+    const damage = AfflictionParser.extractDamage(text);
+    expect(damage).toEqual(
+      expect.arrayContaining([expect.objectContaining({ formula: '2d6', type: '毒素' })]),
+    );
+  });
+
+  test('extracts Chinese "or" damage pattern', () => {
+    const text = '2d6 火焰 或 寒冷 伤害';
+    const damage = AfflictionParser.extractDamage(text);
+    expect(damage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ formula: '2d6', type: '火焰', isChoice: true, alternativeType: '寒冷' }),
+      ]),
+    );
+  });
+
+  // ── detectManualHandling ─────────────────────────────────────────────────
+
+  test('flags Chinese "或" (or) as manual handling', () => {
+    const text = '1d6 火焰 或 寒冷';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(true);
+  });
+
+  test('flags Chinese "秘密" (secret) as manual handling', () => {
+    const text = '秘密豁免检定';
+    expect(AfflictionParser.detectManualHandling(text)).toBe(true);
+  });
+
+  // ── extractWeakness ───────────────────────────────────────────────────────
+
+  test('extracts Chinese weakness "弱点 火焰 5"', () => {
+    const text = '弱点火焰5';
+    const weakness = AfflictionParser.extractWeakness(text);
+    expect(weakness).toEqual([{ type: '火焰', value: 5 }]);
+  });
+
+  // ── extractReferencedAfflictions ──────────────────────────────────────────
+
+  test('extracts Chinese referenced affliction "暴露于"', () => {
+    const text = '暴露于 恶魔热病';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toBe('恶魔热病');
+  });
+
+  test('extracts Chinese referenced affliction "感染"', () => {
+    const text = '感染 污秽热病';
+    const refs = AfflictionParser.extractReferencedAfflictions(text);
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toBe('污秽热病');
+  });
+
+  // ── extractEffectSection ──────────────────────────────────────────────────
+
+  test('extracts Chinese effect section', () => {
+    const html = '<p><strong>效果</strong> 该生物在检定中受到-2状态减值。</p>';
+    const effect = AfflictionParser.extractEffectSection(html);
+    expect(effect).toContain('状态减值');
+  });
+
+  // ── stage references ──────────────────────────────────────────────────────
+
+  test('resolves Chinese "如同阶段 N" stage reference', () => {
+    const html =
+      '<p><strong>阶段1</strong> @Damage[1d6[poison]]（1轮）</p>' +
+      '<p><strong>阶段2</strong> 如同阶段1（1轮）</p>';
+
+    const stages = AfflictionParser.extractStages(html);
+    expect(stages).toHaveLength(2);
+    expect(stages[1].damage).toEqual(stages[0].damage);
+  });
+
+  // ── extractMultipleExposure ───────────────────────────────────────────────
+
+  test('extracts Chinese multiple exposure "每次暴露"', () => {
+    const desc = '<p>每次暴露于此毒素，阶段增加1。</p>';
+    const result = AfflictionParser.extractMultipleExposure(desc);
+    expect(result).not.toBeNull();
+    expect(result.stageIncrease).toBe(1);
   });
 });
 

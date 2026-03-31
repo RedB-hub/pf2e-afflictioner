@@ -179,7 +179,7 @@ export const RU_PARSER_LOCALE = {
     },
     // English fallbacks
     {
-      main: /(?:each\s+(?:time\s+you(?:'re|are)\s+exposed|additional\s+exposure)).*?(?:increase|advance).*?(?:stage|stages)\s*(?:by\s*)?(\d+)/i,
+      main: /(?:each\s+(?:time\s+you(?:'re|\s+are)\s+exposed|additional\s+exposure)).*?(?:increase|advance).*?(?:stage|stages)\s*(?:by\s*)?(\d+)/i,
       minStage: /(?:while|at|when)\s+(?:already\s+)?(?:at\s+)?stage\s+(\d+)/i,
     },
     {

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-03-31
+
+### Fixed
+
+- **Non-ASCII manual-handling keywords ignored**: `detectManualHandling` used `\b` word boundaries unconditionally, which silently failed for Cyrillic (e.g. "или", "тайный") and CJK (e.g. "秘密", "或") keywords since JS `\b` only matches ASCII word characters. Now uses space/punctuation boundaries for Cyrillic and plain substring matching for CJK locales.
+- **Non-ASCII condition names not matched in plain text**: `extractConditions` plain-text path used `\b` for all condition display names, causing Russian conditions like "тошнота" to never match. Now detects non-ASCII display names and applies appropriate boundary strategy per locale.
+- **"Each time you are exposed" multiple-exposure pattern not matching**: The regex `you(?:'re|are)` matched `you're` but not `you are` (with space). Fixed to `you(?:'re|\s+are)` in EN and RU locale files.
+
 ## [2.0.0] - 2026-03-25
 
 ### Added

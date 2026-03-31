@@ -89,7 +89,7 @@ export const EN_PARSER_LOCALE = {
   // captures the minimum stage qualifier in group 1.
   multipleExposurePatterns: [
     {
-      main: /(?:each\s+(?:time\s+you(?:'re|are)\s+exposed|additional\s+exposure)).*?(?:increase|advance).*?(?:stage|stages)\s*(?:by\s*)?(\d+)/i,
+      main: /(?:each\s+(?:time\s+you(?:'re|\s+are)\s+exposed|additional\s+exposure)).*?(?:increase|advance).*?(?:stage|stages)\s*(?:by\s*)?(\d+)/i,
       minStage: /(?:while|at|when)\s+(?:already\s+)?(?:at\s+)?stage\s+(\d+)/i,
     },
     {
