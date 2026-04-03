@@ -21,7 +21,7 @@
 }
 
 .pf2e-afflictioner-save-request h3 i {
-  animation: pulse-danger 2s ease-in-out infinite;
+  color: #8b0000;
 }
 
 .pf2e-afflictioner-save-request p {
@@ -87,20 +87,8 @@
 }
 
 .pf2e-afflictioner-treatment-request h3 i {
-  animation: pulse-treatment 2s ease-in-out infinite;
+  color: var(--afflictioner-poison);
   filter: drop-shadow(0 0 4px rgba(74, 124, 42, 0.6));
-}
-
-@keyframes pulse-treatment {
-  0%,
-  100% {
-    color: var(--afflictioner-poison);
-    filter: drop-shadow(0 0 4px rgba(74, 124, 42, 0.6));
-  }
-  50% {
-    color: #5a9c3a;
-    filter: drop-shadow(0 0 8px rgba(90, 156, 58, 0.8));
-  }
 }
 
 .pf2e-afflictioner-treatment-request p {

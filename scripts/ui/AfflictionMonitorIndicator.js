@@ -393,7 +393,7 @@ class AfflictionMonitorIndicator {
       .pf2e-afflictioner-monitor .indicator-icon {
         font-size: 18px;
         color: #ffff00;
-        animation: pulse-biohazard-indicator 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 4px rgba(255, 255, 0, 0.6));
       }
       .pf2e-afflictioner-monitor .indicator-badge {
         position: absolute;
@@ -412,43 +412,13 @@ class AfflictionMonitorIndicator {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       }
 
-      @keyframes pulse-biohazard-indicator {
-        0%, 100% {
-          filter: drop-shadow(0 0 4px rgba(255, 255, 0, 0.6));
-        }
-        50% {
-          filter: drop-shadow(0 0 8px rgba(255, 255, 0, 1));
-        }
-      }
-
       .pf2e-afflictioner-monitor.needs-attention {
-        animation: pulse-attention 1s ease-in-out infinite;
+        box-shadow: 0 4px 20px rgba(255, 0, 0, 1);
+        border-color: #ff0000;
       }
 
       .pf2e-afflictioner-monitor.needs-attention .indicator-icon {
-        animation: pulse-urgent 1s ease-in-out infinite;
-      }
-
-      @keyframes pulse-attention {
-        0%, 100% {
-          box-shadow: 0 2px 12px rgba(139, 0, 0, 0.5);
-          border-color: #8b0000;
-        }
-        50% {
-          box-shadow: 0 4px 20px rgba(255, 0, 0, 1);
-          border-color: #ff0000;
-        }
-      }
-
-      @keyframes pulse-urgent {
-        0%, 100% {
-          filter: drop-shadow(0 0 6px rgba(255, 255, 0, 0.8));
-          transform: scale(1);
-        }
-        50% {
-          filter: drop-shadow(0 0 12px rgba(255, 255, 0, 1));
-          transform: scale(1.1);
-        }
+        filter: drop-shadow(0 0 12px rgba(255, 255, 0, 1));
       }
 
       .pf2e-afflictioner-tooltip {
