@@ -79,8 +79,6 @@ export const FR_PARSER_LOCALE = {
   durationFixedRegex: /(\d+)\s+(\S+)/i,
   durationUnitMap: {
     // French forms (singular, plural)
-    'rounds': 'round',
-    'minutes': 'minute',
     'heure': 'hour', 'heures': 'hour',
     'jour': 'day', 'jours': 'day',
     'semaine': 'week', 'semaines': 'week',
